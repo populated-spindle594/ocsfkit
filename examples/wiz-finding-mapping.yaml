@@ -1,0 +1,32 @@
+schema_version: 1.7.0
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+  category_name: Findings
+fields:
+  time:
+    from: $.createdAt
+    transform: parse_timestamp
+    required: true
+  severity:
+    from: $.severity
+    transform: title_case
+  severity_id:
+    from: $.severity
+    transform: severity_text_to_id
+    required: true
+  message:
+    from: $.name
+  metadata.product.name:
+    default: Wiz
+  cloud.account_uid:
+    from: $.cloudAccount
+  cloud.region:
+    from: $.region
+  resources[].name:
+    from: $.resourceName
+  resources[].type:
+    from: $.resourceType
+drop: []
+

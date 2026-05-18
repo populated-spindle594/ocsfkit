@@ -1,0 +1,29 @@
+schema_version: 1.7.0
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+  category_name: Findings
+fields:
+  time:
+    from: $._time
+    transform: parse_timestamp
+    required: true
+  severity:
+    from: $.urgency
+    transform: title_case
+  severity_id:
+    from: $.urgency
+    transform: severity_text_to_id
+    required: true
+  message:
+    from: $.rule_name
+  metadata.product.name:
+    default: Splunk Enterprise Security
+  actor.user.name:
+    from: $.user
+  src_endpoint.ip:
+    from: $.src
+drop:
+  - $.search_name
+

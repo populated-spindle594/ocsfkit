@@ -1,0 +1,10 @@
+{
+  "createdAt": "2026-04-10T06:07:08Z",
+  "name": "Publicly exposed VM",
+  "severity": "CRITICAL",
+  "cloudAccount": "example-account",
+  "region": "us-central1",
+  "resourceName": "vm-prod-1",
+  "resourceType": "VirtualMachine"
+}
+

@@ -111,14 +111,25 @@ ocsfkit explain event.json --mapping mapping.yaml</code></pre>
         </div>
       </section>
       <h2>Examples</h2>
-      <p>Included mappings cover AWS GuardDuty, AWS Security Hub, CloudTrail, Okta, Entra ID, GitHub audit logs, CrowdStrike, Palo Alto traffic, and Zeek.</p>
+      <p>Included mappings cover AWS GuardDuty, AWS Security Hub, CloudTrail, Okta, Entra ID, GitHub audit logs, CrowdStrike, Palo Alto traffic, Zeek, Splunk ES, Sentinel, Defender, Wiz, Lacework, GCP SCC, Cloudflare, and Kubernetes audit logs.</p>
       <pre><code>ocsfkit map fixtures/aws_guardduty_finding.json \
   --mapping examples/guardduty-mapping.yaml
 
 ocsfkit coverage fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25
 
-ocsfkit validate-mapping examples/okta-authentication-mapping.yaml</code></pre>
+ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+
+ocsfkit report fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --output report.html
+
+ocsfkit workshop fixtures/wiz_finding.json \
+  --mapping examples/wiz-finding-mapping.yaml</code></pre>
+      <h2>Workflow</h2>
+      <p>Inspect source fields with workshop mode, map known fields, explicitly drop reviewed noise, run explain for provenance, gate coverage in CI, and lock behavior with fixture tests.</p>
       <h2>Project Links</h2>
       <p>
         <a href="https://github.com/pfrederiksen/ocsfkit">GitHub repository</a> ·
@@ -128,4 +139,3 @@ ocsfkit validate-mapping examples/okta-authentication-mapping.yaml</code></pre>
     </main>
   </body>
 </html>
-

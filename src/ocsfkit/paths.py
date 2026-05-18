@@ -11,6 +11,10 @@ from ocsfkit.errors import MappingError, QueryError
 class PathToken:
     key: str
     is_array: bool = False
+    index: int | None = None
+    wildcard: bool = False
+    filter_key: str | None = None
+    filter_value: str | None = None
 
 
 def parse_dotted_path(path: str) -> list[PathToken]:
@@ -20,11 +24,35 @@ def parse_dotted_path(path: str) -> list[PathToken]:
     for part in path.split("."):
         if not part:
             raise MappingError(f"Invalid target path: {path!r}")
-        if part.endswith("[]"):
+        if part.endswith("[*]"):
+            key = part[:-3]
+            if not key:
+                raise MappingError(f"Invalid wildcard target path segment: {part!r}")
+            tokens.append(PathToken(key=key, is_array=True, wildcard=True))
+        elif part.endswith("[]"):
             key = part[:-2]
             if not key:
                 raise MappingError(f"Invalid array target path segment: {part!r}")
             tokens.append(PathToken(key=key, is_array=True))
+        elif "[" in part and part.endswith("]"):
+            key, selector = part.split("[", 1)
+            selector = selector[:-1]
+            if not key:
+                raise MappingError(f"Invalid array path segment: {part!r}")
+            if selector.isdigit():
+                tokens.append(PathToken(key=key, is_array=True, index=int(selector)))
+            elif selector.startswith("?") and "==" in selector:
+                filter_key, filter_value = selector[1:].split("==", 1)
+                tokens.append(
+                    PathToken(
+                        key=key,
+                        is_array=True,
+                        filter_key=filter_key.strip(),
+                        filter_value=filter_value.strip().strip("'\""),
+                    )
+                )
+            else:
+                raise MappingError(f"Unsupported array selector: {part!r}")
         elif "[]" in part:
             raise MappingError(f"Array marker is only supported at the end of a segment: {part!r}")
         else:
@@ -90,7 +118,17 @@ def get_dotted(source: dict[str, Any], path: str) -> Any:
             value = cursor[token.key]
             if not isinstance(value, list):
                 return None
-            cursor = value
+            if token.index is not None:
+                cursor = value[token.index] if token.index < len(value) else None
+            elif token.filter_key is not None:
+                cursor = [
+                    item
+                    for item in value
+                    if isinstance(item, dict)
+                    and str(item.get(token.filter_key)) == token.filter_value
+                ]
+            else:
+                cursor = value
             continue
         if isinstance(cursor, list):
             cursor = [
@@ -109,7 +147,7 @@ def extract_json_path(source: dict[str, Any], path: str) -> Any:
     if path == "$":
         return source
     if not path.startswith("$."):
-        raise MappingError(f"Only simple JSONPath expressions like $.a.b are supported: {path!r}")
+        raise MappingError(f"Only JSONPath expressions like $.a.b are supported: {path!r}")
     return get_dotted(source, path[2:])
 
 

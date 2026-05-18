@@ -103,3 +103,40 @@ def test_schema_smoke() -> None:
     result = runner.invoke(app, ["schema"])
     assert result.exit_code == 0
     assert "Detection Finding" in result.stdout
+
+
+def test_test_mapping_smoke() -> None:
+    result = runner.invoke(app, ["test-mapping", "tests/fixtures/guardduty-test.yaml"])
+    assert result.exit_code == 0
+    assert "passed" in result.stdout
+
+
+def test_report_smoke(tmp_path) -> None:
+    output = tmp_path / "report.html"
+    result = runner.invoke(
+        app,
+        [
+            "report",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--output",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Mapping Report" in output.read_text()
+
+
+def test_import_schema_smoke(tmp_path) -> None:
+    schema = tmp_path / "schema.json"
+    schema.write_text('{"schema_version": "test", "classes": {"1": {"class_name": "X"}}}')
+    result = runner.invoke(app, ["import-schema", str(schema)])
+    assert result.exit_code == 0
+    assert "schema_version" in result.stdout
+
+
+def test_workshop_smoke() -> None:
+    result = runner.invoke(app, ["workshop", "fixtures/okta_login_event.json"])
+    assert result.exit_code == 0
+    assert "$.published" in result.stdout

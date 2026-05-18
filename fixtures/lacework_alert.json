@@ -1,0 +1,10 @@
+{
+  "startTime": "2026-04-11T08:09:10Z",
+  "alertName": "New external server connection",
+  "severity": "medium",
+  "accountId": "111122223333",
+  "hostname": "server-01",
+  "srcIp": "10.2.3.4",
+  "dstIp": "203.0.113.88"
+}
+

@@ -1,0 +1,9 @@
+{
+  "createdTime": "2026-04-09T03:04:05Z",
+  "title": "Malware detected",
+  "severity": "High",
+  "category": "Malware",
+  "computerDnsName": "host01.example.com",
+  "aadTenantId": "00000000-0000-4000-8000-000000000004"
+}
+

@@ -1,0 +1,9 @@
+{
+  "_time": "2026-04-07T10:00:00Z",
+  "rule_name": "Multiple failed logins",
+  "urgency": "high",
+  "user": "dana",
+  "src": "198.51.100.77",
+  "search_name": "ESCU - Failed Login Spike"
+}
+

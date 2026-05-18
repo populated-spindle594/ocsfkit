@@ -77,14 +77,18 @@ fields:
     from: $.Resources[].Id
 ```
 
-The first release supports a simple JSONPath subset:
+The supported JSONPath subset is intentionally small but practical:
 
 - `$` for the whole source event.
 - `$.a.b.c` for nested object lookup.
-- `$.items[].name` for collecting a field from each object in an array.
+- `$.items[].name` and `$.items[*].name` for collecting a field from each
+  object in an array.
+- `$.items[0].name` for selecting a single array index.
+- `$.items[?type==instance].id` for simple equality filters on arrays of
+  objects.
 
-It does not support filters, recursive descent, arbitrary expressions, or joins.
-Keep enrichment outside the mapping for now.
+It does not support recursive descent, arbitrary expressions, joins, or complex
+boolean filters. Keep enrichment outside the mapping for now.
 
 ## Provenance
 
@@ -145,6 +149,16 @@ Built-in transforms:
 - `lower`, `upper`, `title_case`: common string normalization helpers.
 - `epoch_seconds_to_ms`: converts epoch seconds to epoch milliseconds.
 
+Vendor-oriented transform packs:
+
+- `aws.severity`: maps AWS-style numeric or text severity values to
+  `severity_id`.
+- `azure.status_id` and `azure.status`: normalize common Microsoft Entra ID and
+  Sentinel result/status values.
+- `okta.status_id` and `okta.status`: normalize Okta outcome results.
+- `network.activity_id`: maps common network actions such as allow, deny, and
+  connect to stable activity IDs.
+
 Transforms can be chained:
 
 ```yaml
@@ -183,6 +197,78 @@ TRANSFORMS = {"login_status_to_id": login_status_to_id}
 Custom transform files execute as Python code. Treat them like source code, not
 data from untrusted parties.
 
+## Mapping Tests
+
+Use `test-mapping` when a mapping becomes important enough to review and release.
+The spec is a tiny YAML file:
+
+```yaml
+input: ../../fixtures/aws_guardduty_finding.json
+mapping: ../../examples/guardduty-mapping.yaml
+expected: guardduty-expected.json
+```
+
+Run:
+
+```bash
+ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+ocsfkit test-mapping tests/fixtures/guardduty-test.yaml --json
+```
+
+The expected file should contain the mapped OCSF event. Failures are reported as
+semantic field changes, additions, and removals.
+
+## Coverage Budgets
+
+Use `coverage` to review mapping quality across NDJSON streams:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml
+```
+
+Quality budgets make this useful in CI:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25
+```
+
+Budgets are intentionally simple:
+
+- `--min-confidence` fails when average explanation confidence is below the
+  threshold.
+- `--max-unmapped` fails when the total unmapped source-field observations are
+  above the threshold.
+
+Generate a shareable HTML version with:
+
+```bash
+ocsfkit report fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --output report.html
+```
+
+## Workshop Flow
+
+For a new source, workshop mode prints all source paths:
+
+```bash
+ocsfkit workshop fixtures/wiz_finding.json
+```
+
+With an existing mapping, it appends the explanation report:
+
+```bash
+ocsfkit workshop fixtures/wiz_finding.json \
+  --mapping examples/wiz-finding-mapping.yaml
+```
+
+Pair it with `init-mapping` to create a first draft, then iterate through
+`explain`, `coverage`, and `test-mapping`.
+
 ## Dropping Source Fields
 
 Use `drop` only for fields you intentionally reviewed:
@@ -199,11 +285,14 @@ Dropped fields remain visible in explain output. Unreviewed fields stay in
 ## Real Mapping Workflow
 
 1. Map only the fields you understand.
-2. Run `ocsfkit explain --json` and sort by `unmapped_source_fields`.
-3. Add mappings for high-value fields.
-4. Add `drop` entries for noisy fields after review.
-5. Run `ocsfkit lint` on mapped output.
-6. Use `ocsfkit diff` before replacing a production mapping.
+2. Use `workshop` to inspect source paths and review the draft.
+3. Run `ocsfkit explain --json` and sort by `unmapped_source_fields`.
+4. Add mappings for high-value fields.
+5. Add `drop` entries for noisy fields after review.
+6. Run `ocsfkit coverage` with budgets on representative streams.
+7. Add `test-mapping` fixtures for important mappings.
+8. Run `ocsfkit lint` on mapped output.
+9. Use `ocsfkit diff` before replacing a production mapping.
 
 ## Built-In Class Coverage
 

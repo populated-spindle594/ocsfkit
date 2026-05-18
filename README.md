@@ -26,6 +26,13 @@ knowing what happened during normalization:
 pip install ocsfkit
 ```
 
+Homebrew:
+
+```bash
+brew tap pfrederiksen/tap
+brew install ocsfkit
+```
+
 For local development:
 
 ```bash
@@ -88,8 +95,13 @@ ocsfkit query fixtures/ocsf_detection_finding.json severity_id
 ocsfkit query fixtures/ocsf_detection_finding.json metadata.product.name
 ocsfkit query fixtures/ocsf_detection_finding.json cloud.account_uid
 ocsfkit coverage fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml
+ocsfkit coverage fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --min-confidence 0.7 --max-unmapped 10
 ocsfkit validate-mapping examples/guardduty-mapping.yaml
 ocsfkit init-mapping fixtures/aws_guardduty_finding.json
+ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+ocsfkit report fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --output report.html
+ocsfkit workshop fixtures/aws_guardduty_finding.json --mapping examples/guardduty-mapping.yaml
+ocsfkit import-schema ./ocsf-schema-export
 ```
 
 ## Command Reference
@@ -165,11 +177,89 @@ ocsfkit query <input> resources[].name
 
 For NDJSON, one result is printed per event.
 
+### `coverage`
+
+Summarizes mapping quality across an event stream.
+
+```bash
+ocsfkit coverage <input> --mapping mapping.yaml [--json]
+ocsfkit coverage <input> --mapping mapping.yaml --min-confidence 0.80 --max-unmapped 25
+```
+
+Coverage exits non-zero when a configured quality budget fails. This is useful
+for CI gates that allow gradual mapping work while preventing regressions.
+
+### `validate-mapping`
+
+Checks a mapping file before it is used against events.
+
+```bash
+ocsfkit validate-mapping examples/guardduty-mapping.yaml
+```
+
+It reports malformed field specs, unknown built-in transforms, and likely schema
+issues without needing a source event.
+
+### `init-mapping`
+
+Generates a starter mapping from a representative event.
+
+```bash
+ocsfkit init-mapping fixtures/aws_guardduty_finding.json --product-name "Amazon GuardDuty"
+```
+
+Treat the output as a review worksheet, not a complete mapping.
+
+### `test-mapping`
+
+Runs a fixture-based mapping regression test.
+
+```bash
+ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+```
+
+The spec points at a source input, a mapping, and expected OCSF JSON. Any
+semantic difference is reported with the same diff engine as `ocsfkit diff`.
+
+### `report`
+
+Writes a standalone HTML mapping coverage report.
+
+```bash
+ocsfkit report fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --output report.html
+```
+
+Use this when a mapping review needs to be shared outside a terminal or CI log.
+
+### `workshop`
+
+Prints a guided mapping worksheet from a source event. With a mapping, it also
+renders the explanation report.
+
+```bash
+ocsfkit workshop fixtures/aws_guardduty_finding.json
+ocsfkit workshop fixtures/aws_guardduty_finding.json --mapping examples/guardduty-mapping.yaml
+```
+
+### `schema` and `import-schema`
+
+`schema` emits the bundled minimal registry. `import-schema` converts an
+upstream-style JSON/YAML schema file or directory into the small registry shape
+that `ocsfkit` understands.
+
+```bash
+ocsfkit schema --schema-version 1.7.0
+ocsfkit import-schema ./ocsf-schema-export > schema.json
+```
+
 ## Mapping Format
 
-Mappings are YAML. Source paths use a deliberately small JSONPath subset such as
-`$.eventTime` and `$.userIdentity.userName`. Target paths use dotted OCSF paths
-such as `cloud.account_uid` and `actor.user.name`.
+Mappings are YAML. Source paths use a deliberate JSONPath subset such as
+`$.eventTime`, `$.Resources[*].Id`, `$.items[0].name`, and
+`$.items[?type==instance].id`. Target paths use dotted OCSF paths such as
+`cloud.account_uid` and `actor.user.name`.
 
 ```yaml
 schema_version: 1.7.0
@@ -205,6 +295,10 @@ drop:
 The explanation model tracks mapped, transformed, defaulted, guessed, dropped,
 unmapped, and missing fields, plus a confidence score.
 
+Built-in transforms include common OCSF helpers plus vendor-oriented transform
+packs such as `aws.severity`, `azure.status_id`, `azure.status`,
+`okta.status_id`, `okta.status`, and `network.activity_id`.
+
 Included examples:
 
 - [GuardDuty mapping](examples/guardduty-mapping.yaml)
@@ -212,6 +306,8 @@ Included examples:
 - [CloudTrail console login mapping](examples/cloudtrail-console-login-mapping.yaml)
 - [Custom transform module](examples/custom_transforms.py)
 - Okta, Microsoft Entra ID, GitHub Audit Log, CrowdStrike, Palo Alto, and Zeek mappings.
+- Splunk ES, Microsoft Sentinel, Defender, Wiz, Lacework, GCP SCC, Cloudflare,
+  and Kubernetes audit mappings.
 
 ## Minimal OCSF Scope
 
@@ -264,6 +360,20 @@ The repository includes fake, realistic fixtures for local testing:
 - `fixtures/aws_guardduty_finding.json`
 - `fixtures/aws_securityhub_finding.json`
 - `fixtures/cloudtrail_event.json`
+- `fixtures/azure_ad_signin.json`
+- `fixtures/okta_login_event.json`
+- `fixtures/github_audit_event.json`
+- `fixtures/crowdstrike_detection.json`
+- `fixtures/paloalto_traffic.json`
+- `fixtures/zeek_conn.json`
+- `fixtures/splunk_notable.json`
+- `fixtures/sentinel_alert.json`
+- `fixtures/defender_alert.json`
+- `fixtures/wiz_finding.json`
+- `fixtures/lacework_alert.json`
+- `fixtures/gcp_scc_finding.json`
+- `fixtures/cloudflare_log.json`
+- `fixtures/kubernetes_audit.json`
 - `fixtures/ocsf_detection_finding.json`
 - `fixtures/broken_ocsf_event.json`
 - `fixtures/guardduty.ndjson`
@@ -285,7 +395,7 @@ The CLI entry point is `ocsfkit = "ocsfkit.cli:app"`.
 This repository is ready for normal Python packaging with `pyproject.toml`.
 Recommended release flow:
 
-1. Tag a version: `git tag v0.3.1 && git push --tags`
+1. Tag a version: `git tag v0.4.0 && git push --tags`
 2. The `.github/workflows/release.yml` workflow builds distributions.
 3. PyPI publishing uses `pypa/gh-action-pypi-publish` with the
    `PYPI_API_TOKEN` repository secret.

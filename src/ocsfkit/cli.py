@@ -12,11 +12,12 @@ from ocsfkit.ci import (
     lint_issues_to_github_annotations,
     lint_issues_to_sarif,
 )
-from ocsfkit.coverage import mapping_coverage
+from ocsfkit.coverage import enforce_coverage_thresholds, mapping_coverage
 from ocsfkit.diff import diff_events
 from ocsfkit.errors import OCSFKitError, QueryError
 from ocsfkit.io import load_events, load_mapping_file
 from ocsfkit.mapping import apply_mapping
+from ocsfkit.mapping_test import run_mapping_test
 from ocsfkit.paths import flatten_paths, query_field
 from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
 from ocsfkit.render import (
@@ -27,7 +28,9 @@ from ocsfkit.render import (
     render_explanation,
     render_lint,
 )
+from ocsfkit.report import coverage_html
 from ocsfkit.schema import bundled_schema
+from ocsfkit.schema_import import import_schema
 from ocsfkit.validation import validate_mapping_doc
 
 app = typer.Typer(
@@ -216,6 +219,12 @@ def coverage_command(
     ],
     mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    min_confidence: Annotated[
+        float | None, typer.Option("--min-confidence", help="Fail below this average confidence")
+    ] = None,
+    max_unmapped: Annotated[
+        int | None, typer.Option("--max-unmapped", help="Fail above this unmapped field count")
+    ] = None,
 ) -> None:
     """Report mapping coverage across an event stream."""
 
@@ -223,8 +232,13 @@ def coverage_command(
         mapping_doc = load_mapping_file(mapping)
         custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
         report = mapping_coverage(load_events(input), mapping_doc, custom_transforms)
+        failures = enforce_coverage_thresholds(report, min_confidence, max_unmapped)
         if json_output:
-            print_json(report.model_dump())
+            payload = report.model_dump()
+            payload["threshold_failures"] = failures
+            print_json(payload)
+            if failures:
+                raise typer.Exit(1)
             return
         console.print(f"[bold]Events:[/bold] {report.events}")
         console.print(f"[bold]Average confidence:[/bold] {report.average_confidence:.3f}")
@@ -235,6 +249,10 @@ def coverage_command(
                 report.unmapped_source_fields.items(), key=lambda item: item[1], reverse=True
             )[:20]:
                 console.print(f"  {path}: {count}")
+        for failure in failures:
+            console.print(f"[red]{failure}[/red]")
+        if failures:
+            raise typer.Exit(1)
 
     _run(command)
 
@@ -300,6 +318,79 @@ def schema_command(
 ) -> None:
     """Emit the bundled minimal OCSF schema registry as JSON."""
     _run(lambda: print_json(bundled_schema(version)))
+
+
+@app.command("import-schema")
+def import_schema_command(
+    path: Annotated[str, typer.Argument(help="OCSF schema JSON/YAML file or directory")],
+) -> None:
+    """Import an upstream-style OCSF schema export into ocsfkit JSON."""
+    _run(lambda: print_json(import_schema(path)))
+
+
+@app.command("test-mapping")
+def test_mapping_command(
+    spec: Annotated[str, typer.Argument(help="Mapping test YAML path")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Run a mapping fixture test against expected OCSF output."""
+
+    def command() -> None:
+        changes = run_mapping_test(spec)
+        if json_output:
+            print_json([change.model_dump() for change in changes])
+        elif changes:
+            render_diff([changes])
+        else:
+            console.print("[green]Mapping test passed[/green]")
+        if changes:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("report")
+def report_command(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    output: Annotated[str, typer.Option("--output", "-o", help="HTML output path")],
+) -> None:
+    """Generate an HTML mapping coverage report."""
+
+    def command() -> None:
+        mapping_doc = load_mapping_file(mapping)
+        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+        report = mapping_coverage(load_events(input), mapping_doc, custom_transforms)
+        Path(output).write_text(coverage_html(report))
+        console.print(f"Wrote {output}")
+
+    _run(command)
+
+
+@app.command("workshop")
+def workshop_command(
+    input: Annotated[str, typer.Argument(help="Sample source event file")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Existing mapping YAML path")
+    ] = None,
+) -> None:
+    """Print a guided mapping review worksheet for a sample event."""
+
+    def command() -> None:
+        event = load_events(input)[0]
+        source_paths = sorted(flatten_paths(event))
+        console.print("[bold]Source fields[/bold]")
+        for path in source_paths:
+            console.print(f"  {path}")
+        if mapping:
+            mapping_doc = load_mapping_file(mapping)
+            custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+            explanation = apply_mapping(event, mapping_doc, custom_transforms).explanation
+            render_explanation(explanation)
+        else:
+            console.print("\nRun init-mapping to generate a starter YAML.")
+
+    _run(command)
 
 
 def _validate_format(format_name: str) -> None:

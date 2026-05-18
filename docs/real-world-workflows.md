@@ -82,6 +82,80 @@ fields:
     transform: login_status_to_id
 ```
 
+## Normalize Identity and SaaS Audit Logs
+
+The repo includes starter mappings for Okta, Microsoft Entra ID, and GitHub
+Audit Log events:
+
+```bash
+ocsfkit explain fixtures/okta_login_event.json \
+  --mapping examples/okta-authentication-mapping.yaml
+
+ocsfkit explain fixtures/azure_ad_signin.json \
+  --mapping examples/azure-ad-signin-mapping.yaml
+
+ocsfkit explain fixtures/github_audit_event.json \
+  --mapping examples/github-audit-mapping.yaml
+```
+
+These sources are useful for exercising Authentication and audit-like workflows.
+Review actor identity, status, product name, and cloud tenant/account fields
+first. Built-in transform packs such as `okta.status_id`, `okta.status`,
+`azure.status_id`, and `azure.status` are available when source-specific status
+normalization is needed.
+
+## Normalize Detection Platforms
+
+Detection products tend to have rich alert metadata and product-specific
+resource formats. Start with explanation output, then use coverage to find
+recurring gaps across samples:
+
+```bash
+ocsfkit explain fixtures/crowdstrike_detection.json \
+  --mapping examples/crowdstrike-detection-mapping.yaml
+
+ocsfkit explain fixtures/sentinel_alert.json \
+  --mapping examples/sentinel-alert-mapping.yaml
+
+ocsfkit explain fixtures/defender_alert.json \
+  --mapping examples/defender-alert-mapping.yaml
+
+ocsfkit explain fixtures/wiz_finding.json \
+  --mapping examples/wiz-finding-mapping.yaml
+
+ocsfkit explain fixtures/lacework_alert.json \
+  --mapping examples/lacework-alert-mapping.yaml
+```
+
+For these mappings, pay close attention to `message`, `severity_id`,
+`metadata.product.name`, `cloud.account_uid`, `cloud.region`, and
+`resources[]`. If a vendor provides both a display name and a stable resource
+ID, prefer the stable ID in a structured target when the current schema slice
+has one, and keep the human text in `message` or `resources[].name`.
+
+## Normalize Network and Infrastructure Logs
+
+Network and infrastructure events are often better represented as Network
+Activity or Process Activity rather than Detection Finding:
+
+```bash
+ocsfkit explain fixtures/paloalto_traffic.json \
+  --mapping examples/paloalto-traffic-mapping.yaml
+
+ocsfkit explain fixtures/zeek_conn.json \
+  --mapping examples/zeek-conn-mapping.yaml
+
+ocsfkit explain fixtures/cloudflare_log.json \
+  --mapping examples/cloudflare-log-mapping.yaml
+
+ocsfkit explain fixtures/kubernetes_audit.json \
+  --mapping examples/kubernetes-audit-mapping.yaml
+```
+
+Diff class and severity changes before routing these events into production.
+Those fields commonly drive SIEM indexes, detection rules, and dashboard
+filters.
+
 ## CI Gate for Mapping Regressions
 
 A simple CI job can reject mapping changes that break required OCSF fields:
@@ -114,6 +188,29 @@ ocsfkit lint /tmp/mapped.ndjson --github-annotations
 ocsfkit explain fixtures/aws_guardduty_finding.json \
   --mapping examples/guardduty-mapping.yaml \
   --github-annotations
+```
+
+Add a coverage budget when a mapping is mature enough to protect:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25
+```
+
+Generate HTML for human review artifacts:
+
+```bash
+ocsfkit report fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --output report.html
+```
+
+Protect individual mappings with fixture tests:
+
+```bash
+ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
 ```
 
 ## Compare Mapping Versions
@@ -150,3 +247,21 @@ ocsfkit explain fixtures/aws_guardduty_finding.json \
 The JSON output contains `unmapped_source_fields`, so you can collect recurring
 source paths and decide whether to map, drop, or wait for a broader OCSF schema
 slice.
+
+The faster terminal workflow is:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml
+```
+
+For a new source, start with:
+
+```bash
+ocsfkit workshop fixtures/gcp_scc_finding.json
+ocsfkit init-mapping fixtures/gcp_scc_finding.json \
+  --product-name "Google Security Command Center"
+```
+
+Then iterate until the explanation output makes each mapped, dropped, defaulted,
+guessed, and unmapped field intentional.

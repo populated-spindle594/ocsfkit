@@ -58,5 +58,21 @@ def mapping_coverage(
     )
 
 
+def enforce_coverage_thresholds(
+    report: CoverageReport,
+    min_confidence: float | None = None,
+    max_unmapped: int | None = None,
+) -> list[str]:
+    failures: list[str] = []
+    if min_confidence is not None and report.average_confidence < min_confidence:
+        failures.append(
+            f"Average confidence {report.average_confidence:.3f} is below {min_confidence:.3f}"
+        )
+    unmapped_total = sum(report.unmapped_source_fields.values())
+    if max_unmapped is not None and unmapped_total > max_unmapped:
+        failures.append(f"Unmapped source field count {unmapped_total} exceeds {max_unmapped}")
+    return failures
+
+
 def _increment(counts: dict[str, int], key: str) -> None:
     counts[key] = counts.get(key, 0) + 1

@@ -1,0 +1,30 @@
+schema_version: 1.7.0
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+  category_name: Findings
+fields:
+  time:
+    from: $.eventTime
+    transform: parse_timestamp
+    required: true
+  severity:
+    from: $.severity
+    transform: title_case
+  severity_id:
+    from: $.severity
+    transform: severity_text_to_id
+    required: true
+  message:
+    from: $.category
+  metadata.product.name:
+    default: Google Security Command Center
+  cloud.account_uid:
+    from: $.project
+  cloud.region:
+    from: $.location
+  resources[].name:
+    from: $.resourceName
+drop: []
+

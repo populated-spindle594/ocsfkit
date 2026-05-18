@@ -136,11 +136,97 @@ ocsfkit diff /tmp/old-ocsf.ndjson /tmp/new-ocsf.ndjson
 Class and severity changes are highlighted in the human-readable output because
 they tend to affect downstream detections, dashboards, and routing.
 
-## 7. Check Schema Version
+## 7. Measure Coverage Across a Stream
+
+Once one event looks right, run the mapping over a stream and look for recurring
+unmapped fields:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml
+```
+
+Use quality budgets in CI:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25
+```
+
+The command exits non-zero when a budget fails. JSON mode includes
+`threshold_failures` so CI logs and dashboards can explain the failure.
+
+For review meetings or tickets, generate a standalone HTML report:
+
+```bash
+ocsfkit report fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --output report.html
+```
+
+## 8. Lock in Regression Tests
+
+Mapping behavior should be testable like code. A mapping test spec names the
+input event, mapping, and expected OCSF output:
+
+```yaml
+input: ../../fixtures/aws_guardduty_finding.json
+mapping: ../../examples/guardduty-mapping.yaml
+expected: guardduty-expected.json
+```
+
+Run it with:
+
+```bash
+ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+```
+
+If the mapping output changes, `test-mapping` prints a semantic diff and exits
+non-zero.
+
+## 9. Use Workshop Mode for New Sources
+
+When onboarding a new product, start by listing every source path:
+
+```bash
+ocsfkit workshop fixtures/splunk_notable.json
+```
+
+After drafting a mapping, rerun workshop with the mapping to view source paths
+and explanation output together:
+
+```bash
+ocsfkit workshop fixtures/splunk_notable.json \
+  --mapping examples/splunk-notable-mapping.yaml
+```
+
+`init-mapping` can generate a starter YAML from common field names:
+
+```bash
+ocsfkit init-mapping fixtures/splunk_notable.json \
+  --product-name "Splunk Enterprise Security"
+```
+
+## 10. Check Schema Version
 
 Mappings default to OCSF `1.7.0` unless `schema_version` is set. Lint can enforce
 the expected version:
 
 ```bash
 ocsfkit lint /tmp/guardduty-ocsf.json --schema-version 1.7.0
+```
+
+The bundled schema slice can be inspected directly:
+
+```bash
+ocsfkit schema --schema-version 1.7.0
+```
+
+If you have a JSON/YAML export from an upstream schema source, normalize it into
+the small registry shape used by `ocsfkit`:
+
+```bash
+ocsfkit import-schema ./ocsf-schema-export > imported-schema.json
 ```

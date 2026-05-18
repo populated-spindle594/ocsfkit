@@ -1,0 +1,30 @@
+schema_version: 1.7.0
+target_class:
+  class_uid: 4001
+  class_name: Network Activity
+  category_uid: 4
+  category_name: Network Activity
+fields:
+  time:
+    from: $.startTime
+    transform: parse_timestamp
+    required: true
+  activity_id:
+    default: 6
+  activity_name:
+    default: Traffic
+  message:
+    from: $.alertName
+  metadata.product.name:
+    default: Lacework
+  cloud.account_uid:
+    from: $.accountId
+  device.hostname:
+    from: $.hostname
+  src_endpoint.ip:
+    from: $.srcIp
+  dst_endpoint.ip:
+    from: $.dstIp
+drop:
+  - $.severity
+

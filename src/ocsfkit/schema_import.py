@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from ocsfkit.errors import InputLoadError
+
+
+def import_schema(path: str) -> dict[str, Any]:
+    root = Path(path)
+    if root.is_file():
+        return _load_schema_file(root)
+    if not root.is_dir():
+        raise InputLoadError(f"Schema path does not exist: {path}")
+    schema: dict[str, Any] = {"schema_version": "imported", "classes": {}, "fields": {}}
+    for candidate in sorted(root.rglob("*.json")):
+        value = _load_schema_file(candidate)
+        _merge_schema(schema, value)
+    for candidate in sorted(root.rglob("*.yml")) + sorted(root.rglob("*.yaml")):
+        value = _load_schema_file(candidate)
+        _merge_schema(schema, value)
+    return schema
+
+
+def _load_schema_file(path: Path) -> dict[str, Any]:
+    try:
+        raw = path.read_text()
+        value = yaml.safe_load(raw) if path.suffix in {".yml", ".yaml"} else json.loads(raw)
+    except (OSError, json.JSONDecodeError, yaml.YAMLError) as exc:
+        raise InputLoadError(f"Could not load schema file {path}: {exc}") from exc
+    if not isinstance(value, dict):
+        return {}
+    if "classes" in value or "fields" in value:
+        return value
+    class_uid = value.get("uid") or value.get("class_uid")
+    caption = value.get("caption") or value.get("name") or value.get("class_name")
+    if class_uid and caption:
+        return {
+            "classes": {
+                str(class_uid): {
+                    "class_uid": int(class_uid),
+                    "class_name": str(caption),
+                    "category_uid": int(value.get("category_uid") or 0),
+                    "category_name": str(value.get("category_name") or ""),
+                    "required": sorted(value.get("required") or []),
+                    "recommended": sorted(value.get("recommended") or []),
+                }
+            }
+        }
+    return {}
+
+
+def _merge_schema(target: dict[str, Any], source: dict[str, Any]) -> None:
+    for key in ("classes", "fields", "enums"):
+        if isinstance(source.get(key), dict):
+            target.setdefault(key, {}).update(source[key])
+    if source.get("schema_version"):
+        target["schema_version"] = source["schema_version"]

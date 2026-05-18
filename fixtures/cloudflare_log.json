@@ -1,0 +1,9 @@
+{
+  "Datetime": "2026-04-13T10:11:12Z",
+  "ClientIP": "198.51.100.90",
+  "EdgeResponseStatus": 403,
+  "Host": "example.com",
+  "Path": "/admin",
+  "WAFAction": "block"
+}
+

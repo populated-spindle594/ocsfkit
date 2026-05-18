@@ -1,0 +1,32 @@
+schema_version: 1.7.0
+target_class:
+  class_uid: 1007
+  class_name: Process Activity
+  category_uid: 1
+  category_name: System Activity
+fields:
+  time:
+    from: $.requestReceivedTimestamp
+    transform: parse_timestamp
+    required: true
+  activity_id:
+    default: 1
+  activity_name:
+    default: Launch
+  message:
+    from: $.verb
+  metadata.product.name:
+    default: Kubernetes Audit
+  actor.user.name:
+    from: $.user.username
+  actor.user.uid:
+    from: $.user.uid
+  src_endpoint.ip:
+    from: $.sourceIPs[0]
+  resources[].name:
+    from: $.objectRef.name
+  resources[].type:
+    from: $.objectRef.resource
+drop:
+  - $.stage
+

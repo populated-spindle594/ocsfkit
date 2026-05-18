@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from ocsfkit.errors import MappingError
+from ocsfkit.transform_packs import TRANSFORM_PACKS
 
 SEVERITY_TEXT_TO_ID = {
     "unknown": 0,
@@ -106,7 +107,7 @@ TRANSFORMS = {
 
 
 def apply_transform(name: str, value: Any, transforms: dict[str, Any] | None = None) -> Any:
-    registry = TRANSFORMS | (transforms or {})
+    registry = TRANSFORMS | TRANSFORM_PACKS | (transforms or {})
     if name not in registry:
         raise MappingError(f"Unknown transform: {name}")
     return registry[name](value)

@@ -1,0 +1,28 @@
+schema_version: 1.7.0
+target_class:
+  class_uid: 4001
+  class_name: Network Activity
+  category_uid: 4
+  category_name: Network Activity
+fields:
+  time:
+    from: $.Datetime
+    transform: parse_timestamp
+    required: true
+  activity_id:
+    default: 6
+  activity_name:
+    default: Traffic
+  message:
+    from: $.WAFAction
+  metadata.product.name:
+    default: Cloudflare
+  src_endpoint.ip:
+    from: $.ClientIP
+  dst_endpoint.port:
+    default: 443
+drop:
+  - $.EdgeResponseStatus
+  - $.Host
+  - $.Path
+

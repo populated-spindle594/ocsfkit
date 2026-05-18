@@ -1,0 +1,9 @@
+{
+  "eventTime": "2026-04-12T09:10:11Z",
+  "category": "PUBLIC_BUCKET_ACL",
+  "severity": "HIGH",
+  "resourceName": "//storage.googleapis.com/example-bucket",
+  "project": "projects/example-project",
+  "location": "global"
+}
+

@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from ocsfkit.models import DiffChange
+from ocsfkit.transforms import SEVERITY_ID_TO_TEXT
 
 
 def diff_events(before: dict[str, Any], after: dict[str, Any]) -> list[DiffChange]:
     changes: list[DiffChange] = []
     _walk("", before, after, changes)
+    _add_enum_context(changes)
     return changes
 
 
@@ -36,3 +38,16 @@ def _walk(path: str, before: Any, after: Any, changes: list[DiffChange]) -> None
         return
     if before != after:
         changes.append(DiffChange(path=path, before=before, after=after, kind="changed"))
+
+
+def _add_enum_context(changes: list[DiffChange]) -> None:
+    for change in changes:
+        if change.path == "severity_id":
+            change.before = _severity_label(change.before)
+            change.after = _severity_label(change.after)
+
+
+def _severity_label(value: Any) -> Any:
+    if isinstance(value, int) and value in SEVERITY_ID_TO_TEXT:
+        return {"id": value, "name": SEVERITY_ID_TO_TEXT[value]}
+    return value

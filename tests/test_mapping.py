@@ -53,6 +53,14 @@ def test_vendor_mapping_examples() -> None:
         ),
         ("fixtures/paloalto_traffic.json", "examples/paloalto-traffic-mapping.yaml", 4001),
         ("fixtures/zeek_conn.json", "examples/zeek-conn-mapping.yaml", 4001),
+        ("fixtures/splunk_notable.json", "examples/splunk-notable-mapping.yaml", 2004),
+        ("fixtures/sentinel_alert.json", "examples/sentinel-alert-mapping.yaml", 2004),
+        ("fixtures/defender_alert.json", "examples/defender-alert-mapping.yaml", 2004),
+        ("fixtures/wiz_finding.json", "examples/wiz-finding-mapping.yaml", 2004),
+        ("fixtures/lacework_alert.json", "examples/lacework-alert-mapping.yaml", 4001),
+        ("fixtures/gcp_scc_finding.json", "examples/gcp-scc-finding-mapping.yaml", 2004),
+        ("fixtures/cloudflare_log.json", "examples/cloudflare-log-mapping.yaml", 4001),
+        ("fixtures/kubernetes_audit.json", "examples/kubernetes-audit-mapping.yaml", 1007),
     ]
     for fixture, mapping_path, class_uid in cases:
         source = load_events(fixture)[0]

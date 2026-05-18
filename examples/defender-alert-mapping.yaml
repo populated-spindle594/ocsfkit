@@ -1,0 +1,28 @@
+schema_version: 1.7.0
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+  category_name: Findings
+fields:
+  time:
+    from: $.createdTime
+    transform: parse_timestamp
+    required: true
+  severity:
+    from: $.severity
+  severity_id:
+    from: $.severity
+    transform: severity_text_to_id
+    required: true
+  message:
+    from: $.title
+  metadata.product.name:
+    default: Microsoft Defender
+  cloud.account_uid:
+    from: $.aadTenantId
+  device.hostname:
+    from: $.computerDnsName
+drop:
+  - $.category
+
