@@ -24,10 +24,20 @@ def test_securityhub_mapping_application() -> None:
 def test_cloudtrail_mapping_application() -> None:
     source = load_events("fixtures/cloudtrail_event.json")[0]
     mapping = load_mapping_file("examples/cloudtrail-console-login-mapping.yaml")
-    result = apply_mapping(source, mapping)
-    assert result.event["severity_id"] == 3
+    from pathlib import Path
+
+    from ocsfkit.transforms import load_custom_transforms
+
+    custom_transforms = load_custom_transforms(
+        mapping["custom_transforms"],
+        Path("examples"),
+    )
+    result = apply_mapping(source, mapping, custom_transforms)
+    assert result.event["class_uid"] == 3002
     assert result.event["metadata"]["product"]["name"] == "AWS CloudTrail"
     assert result.event["actor"]["user"]["name"] == "alice"
+    assert result.event["status"] == "Failure"
+    assert result.event["status_id"] == 2
 
 
 def test_explain_contains_mapping_quality_categories() -> None:

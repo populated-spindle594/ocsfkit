@@ -7,10 +7,13 @@ fields you have reviewed, then drive the unmapped list toward zero.
 ## File Structure
 
 ```yaml
+schema_version: 1.7.0
+
 target_class:
   class_uid: 2004
   class_name: Detection Finding
   category_uid: 2
+  category_name: Findings
 
 fields:
   time:
@@ -28,6 +31,18 @@ drop:
   - $.debug
 ```
 
+## `schema_version`
+
+Set the OCSF version your mapping targets:
+
+```yaml
+schema_version: 1.7.0
+```
+
+`ocsfkit` writes this to `metadata.version` unless the mapping explicitly sets a
+different value in `target_class`. The linter supports `1.6.0` and `1.7.0` in
+this release and defaults to `1.7.0`.
+
 ## `target_class`
 
 `target_class` sets stable event classification fields before field mappings are
@@ -38,6 +53,7 @@ target_class:
   class_uid: 2004
   class_name: Detection Finding
   category_uid: 2
+  category_name: Findings
 ```
 
 These values are tracked as `defaulted_fields` in explain output because they
@@ -124,6 +140,48 @@ Built-in transforms:
   `Unknown=0`, `Informational=1`, `Low=2`, `Medium=3`, `High=4`,
   `Critical=5`, `Fatal=6`.
 - `severity_id_to_text`: converts the same IDs back to text.
+- `to_string`: converts any value to a string.
+- `to_int`: converts numeric strings and numbers to integers.
+- `lower`, `upper`, `title_case`: common string normalization helpers.
+- `epoch_seconds_to_ms`: converts epoch seconds to epoch milliseconds.
+
+Transforms can be chained:
+
+```yaml
+fields:
+  severity:
+    from: $.Severity.Label
+    transform:
+      - lower
+      - title_case
+```
+
+## Custom Transforms
+
+Mappings can load local Python files that expose a `TRANSFORMS` dictionary:
+
+```yaml
+custom_transforms:
+  - custom_transforms.py
+
+fields:
+  status_id:
+    from: $.responseElements.ConsoleLogin
+    transform: login_status_to_id
+```
+
+Example module:
+
+```python
+def login_status_to_id(value):
+    return 1 if str(value).lower() == "success" else 2
+
+
+TRANSFORMS = {"login_status_to_id": login_status_to_id}
+```
+
+Custom transform files execute as Python code. Treat them like source code, not
+data from untrusted parties.
 
 ## Dropping Source Fields
 
@@ -147,3 +205,14 @@ Dropped fields remain visible in explain output. Unreviewed fields stay in
 5. Run `ocsfkit lint` on mapped output.
 6. Use `ocsfkit diff` before replacing a production mapping.
 
+## Built-In Class Coverage
+
+The registry is intentionally small but no longer single-class:
+
+- `2004` Detection Finding
+- `3002` Authentication
+- `4001` Network Activity
+- `1007` Process Activity
+
+Each class defines required and recommended fields independently so mappings can
+be linted according to the class they produce.

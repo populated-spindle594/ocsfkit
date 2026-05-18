@@ -1,7 +1,13 @@
+schema_version: 1.7.0
+
+custom_transforms:
+  - custom_transforms.py
+
 target_class:
-  class_uid: 2004
-  class_name: Detection Finding
-  category_uid: 2
+  class_uid: 3002
+  class_name: Authentication
+  category_uid: 3
+  category_name: Identity & Access Management
 
 fields:
   time:
@@ -9,12 +15,11 @@ fields:
     transform: parse_timestamp
     required: true
 
-  severity_id:
-    default: 3
-    required: true
+  activity_id:
+    default: 1
 
-  severity:
-    default: Medium
+  activity_name:
+    default: Logon
 
   message:
     from: $.eventName
@@ -34,6 +39,13 @@ fields:
   actor.user.uid:
     from: $.userIdentity.principalId
 
+  status:
+    from: $.responseElements.ConsoleLogin
+    transform: normalize_login_status
+
+  status_id:
+    from: $.responseElements.ConsoleLogin
+    transform: login_status_to_id
+
 drop:
   - $.requestParameters
-

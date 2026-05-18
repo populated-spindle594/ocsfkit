@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from ocsfkit.errors import MappingError
@@ -63,15 +65,72 @@ def severity_id_to_text(value: Any) -> str:
         raise MappingError(f"Unknown severity id: {value!r}") from exc
 
 
+def to_string(value: Any) -> str:
+    return str(value)
+
+
+def to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise MappingError(f"Cannot convert {value!r} to int") from exc
+
+
+def lower(value: Any) -> str:
+    return str(value).lower()
+
+
+def upper(value: Any) -> str:
+    return str(value).upper()
+
+
+def title_case(value: Any) -> str:
+    return str(value).title()
+
+
+def epoch_seconds_to_ms(value: Any) -> int:
+    return to_int(value) * 1000
+
+
 TRANSFORMS = {
     "parse_timestamp": parse_timestamp,
     "severity_text_to_id": severity_text_to_id,
     "severity_id_to_text": severity_id_to_text,
+    "to_string": to_string,
+    "to_int": to_int,
+    "lower": lower,
+    "upper": upper,
+    "title_case": title_case,
+    "epoch_seconds_to_ms": epoch_seconds_to_ms,
 }
 
 
-def apply_transform(name: str, value: Any) -> Any:
-    if name not in TRANSFORMS:
+def apply_transform(name: str, value: Any, transforms: dict[str, Any] | None = None) -> Any:
+    registry = TRANSFORMS | (transforms or {})
+    if name not in registry:
         raise MappingError(f"Unknown transform: {name}")
-    return TRANSFORMS[name](value)
+    return registry[name](value)
 
+
+def load_custom_transforms(paths: list[str], base_dir: Path | None = None) -> dict[str, Any]:
+    loaded: dict[str, Any] = {}
+    for raw_path in paths:
+        path = Path(raw_path)
+        if not path.is_absolute() and base_dir is not None:
+            path = base_dir / path
+        if not path.exists():
+            raise MappingError(f"Custom transform file does not exist: {path}")
+        module_name = f"ocsfkit_custom_transforms_{abs(hash(path))}"
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        if spec is None or spec.loader is None:
+            raise MappingError(f"Could not load custom transform file: {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module_transforms = getattr(module, "TRANSFORMS", None)
+        if not isinstance(module_transforms, dict):
+            raise MappingError(f"{path} must define a TRANSFORMS dictionary")
+        for name, func in module_transforms.items():
+            if not isinstance(name, str) or not callable(func):
+                raise MappingError(f"Invalid custom transform entry in {path}: {name!r}")
+            loaded[name] = func
+    return loaded

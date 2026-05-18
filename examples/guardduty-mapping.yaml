@@ -1,7 +1,10 @@
+schema_version: 1.7.0
+
 target_class:
   class_uid: 2004
   class_name: Detection Finding
   category_uid: 2
+  category_name: Findings
 
 fields:
   time:
@@ -42,4 +45,3 @@ fields:
 drop:
   - $.debug
   - $.rawPayload
-

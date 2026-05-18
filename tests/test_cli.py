@@ -17,6 +17,12 @@ def test_lint_smoke_failure() -> None:
     assert "Invalid severity_id" in result.stdout
 
 
+def test_lint_sarif_smoke() -> None:
+    result = runner.invoke(app, ["lint", "fixtures/broken_ocsf_event.json", "--sarif"])
+    assert result.exit_code == 1
+    assert '"version": "2.1.0"' in result.stdout
+
+
 def test_map_smoke() -> None:
     result = runner.invoke(
         app,
@@ -46,8 +52,22 @@ def test_explain_json_smoke() -> None:
     assert "unmapped_source_fields" in result.stdout
 
 
+def test_explain_github_annotations_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--github-annotations",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "::warning file=fixtures/aws_guardduty_finding.json,line=1::" in result.stdout
+
+
 def test_query_smoke() -> None:
     result = runner.invoke(app, ["query", "fixtures/ocsf_detection_finding.json", "severity_id"])
     assert result.exit_code == 0
     assert "4" in result.stdout
-

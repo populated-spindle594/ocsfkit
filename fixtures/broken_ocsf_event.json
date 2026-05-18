@@ -4,7 +4,7 @@
   "class_name": "Detection",
   "severity_id": 99,
   "metadata": {
+    "version": "1.7.0",
     "product": {}
   }
 }
-

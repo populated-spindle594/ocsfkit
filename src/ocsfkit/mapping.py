@@ -5,17 +5,28 @@ from typing import Any
 from ocsfkit.errors import MappingError
 from ocsfkit.models import FieldDecision, MappingExplanation, MappingResult
 from ocsfkit.paths import extract_json_path, flatten_paths, set_dotted
-from ocsfkit.registry import required_fields_for
+from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, required_fields_for
 from ocsfkit.transforms import apply_transform
 
 
-def apply_mapping(source: dict[str, Any], mapping: dict[str, Any]) -> MappingResult:
+def apply_mapping(
+    source: dict[str, Any],
+    mapping: dict[str, Any],
+    custom_transforms: dict[str, Any] | None = None,
+) -> MappingResult:
     target: dict[str, Any] = {}
-    explanation = MappingExplanation(target_class=dict(mapping.get("target_class") or {}))
+    schema_version = str(mapping.get("schema_version") or DEFAULT_SCHEMA_VERSION)
+    explanation = MappingExplanation(
+        schema_version=schema_version,
+        target_class=dict(mapping.get("target_class") or {}),
+    )
 
     target_class = mapping.get("target_class") or {}
     if not isinstance(target_class, dict):
         raise MappingError("target_class must be a mapping")
+    if "metadata.version" not in target_class:
+        target_class = dict(target_class)
+        target_class["metadata.version"] = schema_version
     for key, value in target_class.items():
         set_dotted(target, key, value)
         explanation.defaulted_fields.append(
@@ -56,14 +67,18 @@ def apply_mapping(source: dict[str, Any], mapping: dict[str, Any]) -> MappingRes
             continue
         transform = spec.get("transform")
         if transform:
-            value = apply_transform(str(transform), value)
+            transform_names = transform if isinstance(transform, list) else [transform]
+            if not all(isinstance(item, str) for item in transform_names):
+                raise MappingError(f"transform for {target_path!r} must be a string or list")
+            for transform_name in transform_names:
+                value = apply_transform(transform_name, value, custom_transforms)
             provenance = "transformed" if provenance == "mapped" else provenance
         set_dotted(target, str(target_path), value)
         decision = FieldDecision(
             target=str(target_path),
             source=source_path,
             value=value,
-            transform=str(transform) if transform else None,
+            transform=", ".join(transform) if isinstance(transform, list) else transform,
             provenance=provenance,  # type: ignore[arg-type]
             required=required,
         )
@@ -85,7 +100,7 @@ def apply_mapping(source: dict[str, Any], mapping: dict[str, Any]) -> MappingRes
     explanation.unmapped_source_fields = sorted(
         path for path in all_leaf_paths if path not in consumed and path not in dropped
     )
-    for path in sorted(required_fields_for(target)):
+    for path in sorted(required_fields_for(target, schema_version)):
         if _target_missing(target, path) and path not in explanation.missing_target_fields:
             explanation.missing_target_fields.append(path)
     explanation.confidence = _confidence(explanation)
@@ -118,4 +133,3 @@ def _confidence(explanation: MappingExplanation) -> float:
         return 1.0
     score = (mapped + 0.7 * defaulted + 0.4 * guessed - 0.8 * missing - 0.08 * unmapped) / total
     return round(max(0.0, min(1.0, score)), 3)
-

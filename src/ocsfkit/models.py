@@ -17,6 +17,7 @@ class FieldDecision(BaseModel):
 
 
 class MappingExplanation(BaseModel):
+    schema_version: str | None = None
     target_class: dict[str, Any] = Field(default_factory=dict)
     mapped_fields: list[FieldDecision] = Field(default_factory=list)
     defaulted_fields: list[FieldDecision] = Field(default_factory=list)
@@ -43,4 +44,3 @@ class DiffChange(BaseModel):
     before: Any = None
     after: Any = None
     kind: Literal["added", "removed", "changed"]
-

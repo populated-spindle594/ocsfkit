@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ocsfkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "An OCSF workbench for normalizing, linting, explaining, diffing, and querying security events."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -56,4 +56,3 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-

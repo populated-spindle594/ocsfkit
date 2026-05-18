@@ -53,19 +53,34 @@ ocsfkit query /tmp/securityhub-ocsf.json resources[].name
 ocsfkit lint /tmp/securityhub-ocsf.json
 ```
 
-## Promote CloudTrail Events Into Findings
+## Normalize CloudTrail Authentication
 
-Raw CloudTrail events are not always findings. A failed console login may become
-a Detection Finding when your detection logic decides it is suspicious:
+Raw CloudTrail events are not always findings. A console login event is better
+represented as Authentication unless a separate detection rule promotes it into
+a finding:
 
 ```bash
 ocsfkit explain fixtures/cloudtrail_event.json \
   --mapping examples/cloudtrail-console-login-mapping.yaml
 ```
 
-Notice that severity is defaulted in this example. That is intentional: the raw
-CloudTrail event does not carry a finding severity. If a SIEM rule supplies a
-risk score, map that field instead of defaulting.
+This mapping uses the Authentication class (`class_uid: 3002`) and a custom
+transform module to convert AWS `ConsoleLogin` values into normalized status
+fields:
+
+```yaml
+custom_transforms:
+  - custom_transforms.py
+
+fields:
+  status:
+    from: $.responseElements.ConsoleLogin
+    transform: normalize_login_status
+
+  status_id:
+    from: $.responseElements.ConsoleLogin
+    transform: login_status_to_id
+```
 
 ## CI Gate for Mapping Regressions
 
@@ -84,6 +99,21 @@ For a softer rollout, keep the report but avoid failing the job:
 
 ```bash
 ocsfkit lint /tmp/mapped.ndjson --warn-only --json
+```
+
+Upload SARIF from GitHub Actions:
+
+```bash
+ocsfkit lint /tmp/mapped.ndjson --sarif > ocsfkit.sarif
+```
+
+Or emit native workflow annotations:
+
+```bash
+ocsfkit lint /tmp/mapped.ndjson --github-annotations
+ocsfkit explain fixtures/aws_guardduty_finding.json \
+  --mapping examples/guardduty-mapping.yaml \
+  --github-annotations
 ```
 
 ## Compare Mapping Versions
@@ -120,4 +150,3 @@ ocsfkit explain fixtures/aws_guardduty_finding.json \
 The JSON output contains `unmapped_source_fields`, so you can collect recurring
 source paths and decide whether to map, drop, or wait for a broader OCSF schema
 slice.
-

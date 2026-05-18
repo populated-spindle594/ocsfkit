@@ -69,6 +69,7 @@ Lint OCSF-looking events:
 ```bash
 ocsfkit lint fixtures/ocsf_detection_finding.json
 ocsfkit lint fixtures/broken_ocsf_event.json --json
+ocsfkit lint fixtures/broken_ocsf_event.json --sarif
 ocsfkit lint fixtures/broken_ocsf_event.json --warn-only
 ```
 
@@ -117,22 +118,26 @@ Shows the mapping decision report without making users inspect the mapped event
 by hand.
 
 ```bash
-ocsfkit explain <input> --mapping mapping.yaml [--json]
+ocsfkit explain <input> --mapping mapping.yaml [--json] [--github-annotations]
 ```
 
 The report includes mapped fields, defaulted fields, guessed fields, dropped
 fields, unmapped source fields, missing target fields, and a confidence score.
+`--github-annotations` emits missing targets and unmapped source fields as
+GitHub Actions annotations.
 
 ### `lint`
 
 Validates OCSF-looking events against the built-in minimal registry.
 
 ```bash
-ocsfkit lint <input> [--json] [--warn-only]
+ocsfkit lint <input> [--json] [--sarif] [--github-annotations] [--warn-only]
 ```
 
 Lint exits non-zero on errors unless `--warn-only` is set. Warnings are used for
 recommended fields and unknown class IDs.
+Use `--schema-version` to enforce the expected OCSF version, and `--sarif` or
+`--github-annotations` in CI.
 
 ### `diff`
 
@@ -163,9 +168,13 @@ Mappings are YAML. Source paths use a deliberately small JSONPath subset such as
 such as `cloud.account_uid` and `actor.user.name`.
 
 ```yaml
+schema_version: 1.7.0
+
 target_class:
   class_uid: 2004
   class_name: Detection Finding
+  category_uid: 2
+  category_name: Findings
 
 fields:
   time:
@@ -197,6 +206,7 @@ Included examples:
 - [GuardDuty mapping](examples/guardduty-mapping.yaml)
 - [Security Hub mapping](examples/securityhub-mapping.yaml)
 - [CloudTrail console login mapping](examples/cloudtrail-console-login-mapping.yaml)
+- [Custom transform module](examples/custom_transforms.py)
 
 ## Minimal OCSF Scope
 
@@ -206,18 +216,41 @@ Implemented fields:
 - `class_uid`
 - `class_name`
 - `category_uid`
+- `category_name`
+- `activity_id`
+- `activity_name`
+- `type_uid`
+- `type_name`
 - `severity_id`
 - `severity`
 - `message`
+- `metadata.version`
 - `metadata.product.name`
 - `actor.user.name`
 - `actor.user.uid`
 - `cloud.account_uid`
 - `cloud.region`
+- `device.hostname`
+- `dst_endpoint.ip`
+- `dst_endpoint.port`
+- `process.name`
+- `process.pid`
 - `resources[].name`
 - `resources[].type`
+- `src_endpoint.ip`
+- `src_endpoint.port`
+- `status`
+- `status_id`
 
-Detection Finding (`class_uid: 2004`) is the first-class example.
+Implemented class registry:
+
+- Detection Finding (`class_uid: 2004`)
+- Authentication (`class_uid: 3002`)
+- Network Activity (`class_uid: 4001`)
+- Process Activity (`class_uid: 1007`)
+
+Schema-version awareness currently supports `1.6.0` and `1.7.0`, with `1.7.0`
+as the default expected version.
 
 ## Fixtures
 
@@ -247,7 +280,7 @@ The CLI entry point is `ocsfkit = "ocsfkit.cli:app"`.
 This repository is ready for normal Python packaging with `pyproject.toml`.
 Recommended release flow:
 
-1. Tag a version: `git tag v0.1.0 && git push --tags`
+1. Tag a version: `git tag v0.2.0 && git push --tags`
 2. The `.github/workflows/release.yml` workflow builds distributions.
 3. PyPI publishing uses trusted publishing through `pypa/gh-action-pypi-publish`.
 4. Homebrew tap updates run when `HOMEBREW_TAP_ENABLED=true` is set as a

@@ -98,6 +98,21 @@ Lint exits non-zero when required fields or bad types are found. Use
 `--warn-only` during exploratory migrations where you want a report without
 failing the job.
 
+For CI systems that understand SARIF:
+
+```bash
+ocsfkit lint /tmp/guardduty-ocsf.json --sarif > ocsfkit.sarif
+```
+
+For GitHub Actions log annotations:
+
+```bash
+ocsfkit lint /tmp/guardduty-ocsf.json --github-annotations
+ocsfkit explain fixtures/aws_guardduty_finding.json \
+  --mapping examples/guardduty-mapping.yaml \
+  --github-annotations
+```
+
 ## 5. Query Fields for Checks
 
 Use `query` for quick shell-friendly assertions:
@@ -121,3 +136,11 @@ ocsfkit diff /tmp/old-ocsf.ndjson /tmp/new-ocsf.ndjson
 Class and severity changes are highlighted in the human-readable output because
 they tend to affect downstream detections, dashboards, and routing.
 
+## 7. Check Schema Version
+
+Mappings default to OCSF `1.7.0` unless `schema_version` is set. Lint can enforce
+the expected version:
+
+```bash
+ocsfkit lint /tmp/guardduty-ocsf.json --schema-version 1.7.0
+```

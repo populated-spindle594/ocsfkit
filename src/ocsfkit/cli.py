@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from ocsfkit.ci import (
+    explanations_to_github_annotations,
+    lint_issues_to_github_annotations,
+    lint_issues_to_sarif,
+)
 from ocsfkit.diff import diff_events
 from ocsfkit.errors import OCSFKitError, QueryError
 from ocsfkit.io import load_events, load_mapping_file
 from ocsfkit.mapping import apply_mapping
 from ocsfkit.paths import query_field
-from ocsfkit.registry import lint_event
+from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
 from ocsfkit.render import (
     console,
     print_events,
@@ -46,6 +52,13 @@ def parse(
 def lint(
     input: Annotated[str, typer.Argument(help="OCSF JSON, YAML, NDJSON file, or - for stdin")],
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    sarif: Annotated[bool, typer.Option("--sarif", help="Emit SARIF JSON for CI")] = False,
+    github_annotations: Annotated[
+        bool, typer.Option("--github-annotations", help="Emit GitHub workflow annotations")
+    ] = False,
+    schema_version: Annotated[
+        str, typer.Option("--schema-version", help="Expected OCSF schema version")
+    ] = DEFAULT_SCHEMA_VERSION,
     warn_only: Annotated[
         bool, typer.Option("--warn-only", help="Exit zero even when errors exist")
     ] = False,
@@ -54,8 +67,13 @@ def lint(
 
     def command() -> None:
         events = load_events(input)
-        issues_by_event = [lint_event(event) for event in events]
-        if json_output:
+        issues_by_event = [lint_event(event, schema_version) for event in events]
+        if sarif:
+            print_json(lint_issues_to_sarif(issues_by_event, input))
+        elif github_annotations:
+            for annotation in lint_issues_to_github_annotations(issues_by_event, input):
+                console.print(annotation)
+        elif json_output:
             print_json([[issue.model_dump() for issue in issues] for issues in issues_by_event])
         else:
             render_lint(issues_by_event)
@@ -82,7 +100,10 @@ def map(  # noqa: A001
     def command() -> None:
         _validate_format(format)
         mapping_doc = load_mapping_file(mapping)
-        results = [apply_mapping(event, mapping_doc) for event in load_events(input)]
+        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+        results = [
+            apply_mapping(event, mapping_doc, custom_transforms) for event in load_events(input)
+        ]
         if explain:
             payload = [
                 {"event": result.event, "explanation": result.explanation.model_dump()}
@@ -102,12 +123,23 @@ def explain(
     ],
     mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    github_annotations: Annotated[
+        bool, typer.Option("--github-annotations", help="Emit GitHub workflow annotations")
+    ] = False,
 ) -> None:
     """Explain mapping decisions, data loss, missing targets, and confidence."""
 
     def command() -> None:
         mapping_doc = load_mapping_file(mapping)
-        results = [apply_mapping(event, mapping_doc) for event in load_events(input)]
+        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+        results = [
+            apply_mapping(event, mapping_doc, custom_transforms) for event in load_events(input)
+        ]
+        if github_annotations:
+            explanations = [result.explanation for result in results]
+            for annotation in explanations_to_github_annotations(explanations, input):
+                console.print(annotation)
+            return
         if json_output:
             print_json([result.explanation.model_dump() for result in results])
             return
@@ -176,6 +208,18 @@ def query(
 def _validate_format(format_name: str) -> None:
     if format_name not in {"json", "ndjson"}:
         raise OCSFKitError("--format must be one of: json, ndjson")
+
+
+def _custom_transforms_for_mapping(mapping_doc: dict, mapping_path: str) -> dict[str, Callable]:
+    from ocsfkit.transforms import load_custom_transforms
+
+    paths = mapping_doc.get("custom_transforms") or []
+    if not paths:
+        return {}
+    if not isinstance(paths, list) or not all(isinstance(item, str) for item in paths):
+        raise OCSFKitError("custom_transforms must be a list of Python file paths")
+    base_dir = Path(mapping_path).resolve().parent
+    return load_custom_transforms(paths, base_dir)
 
 
 def _run(callback: Callable[[], None]) -> None:
