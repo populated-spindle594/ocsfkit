@@ -1,0 +1,3 @@
+input: ../../fixtures/windows_security_event.json
+mapping: ../../examples/windows-security-auth-mapping.yaml
+expected: expected/windows-security-auth-mapping.json

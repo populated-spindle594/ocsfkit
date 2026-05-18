@@ -1,0 +1,26 @@
+{
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "cloud": {
+    "account_uid": "444455556666",
+    "region": "us-west-2"
+  },
+  "message": "Security group should not allow unrestricted SSH access",
+  "metadata": {
+    "product": {
+      "name": "Security Hub"
+    },
+    "version": "1.7.0"
+  },
+  "resources": [
+    {
+      "name": "sg-0123456789abcdef0",
+      "type": "AwsEc2SecurityGroup"
+    }
+  ],
+  "severity": "MEDIUM",
+  "severity_id": 3,
+  "time": 1771616112000
+}

@@ -1,0 +1,25 @@
+{
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "cloud": {
+    "account_uid": "projects/example-project",
+    "region": "global"
+  },
+  "message": "PUBLIC_BUCKET_ACL",
+  "metadata": {
+    "product": {
+      "name": "Google Security Command Center"
+    },
+    "version": "1.7.0"
+  },
+  "resources": [
+    {
+      "name": "//storage.googleapis.com/example-bucket"
+    }
+  ],
+  "severity": "High",
+  "severity_id": 4,
+  "time": 1775985011000
+}

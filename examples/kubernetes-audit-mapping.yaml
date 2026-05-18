@@ -6,7 +6,7 @@ target_class:
   category_name: System Activity
 fields:
   time:
-    from: $.requestReceivedTimestamp
+    from: "$.requestReceivedTimestamp"
     transform: parse_timestamp
     required: true
   activity_id:
@@ -14,19 +14,25 @@ fields:
   activity_name:
     default: Launch
   message:
-    from: $.verb
+    from: "$.verb"
   metadata.product.name:
     default: Kubernetes Audit
   actor.user.name:
-    from: $.user.username
+    from: "$.user.username"
   actor.user.uid:
-    from: $.user.uid
+    from: "$.user.uid"
   src_endpoint.ip:
-    from: $.sourceIPs[0]
+    from: "$.sourceIPs[0]"
   resources[].name:
-    from: $.objectRef.name
+    from: "$.objectRef.name"
   resources[].type:
-    from: $.objectRef.resource
+    from: "$.objectRef.resource"
 drop:
-  - $.stage
-
+- "$.stage"
+metadata:
+  source_product: Kubernetes Audit
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/kubernetes_audit.json

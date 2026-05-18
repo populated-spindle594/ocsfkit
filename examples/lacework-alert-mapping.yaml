@@ -6,7 +6,7 @@ target_class:
   category_name: Network Activity
 fields:
   time:
-    from: $.startTime
+    from: "$.startTime"
     transform: parse_timestamp
     required: true
   activity_id:
@@ -14,17 +14,23 @@ fields:
   activity_name:
     default: Traffic
   message:
-    from: $.alertName
+    from: "$.alertName"
   metadata.product.name:
     default: Lacework
   cloud.account_uid:
-    from: $.accountId
+    from: "$.accountId"
   device.hostname:
-    from: $.hostname
+    from: "$.hostname"
   src_endpoint.ip:
-    from: $.srcIp
+    from: "$.srcIp"
   dst_endpoint.ip:
-    from: $.dstIp
+    from: "$.dstIp"
 drop:
-  - $.severity
-
+- "$.severity"
+metadata:
+  source_product: Lacework
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/lacework_alert.json

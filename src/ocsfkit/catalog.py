@@ -25,10 +25,21 @@ def mapping_catalog(root: str = "examples") -> list[dict[str, Any]]:
             }
         )
         issues = validate_mapping_doc(mapping)
+        metadata = mapping.get("metadata") or {}
+        if not isinstance(metadata, dict):
+            metadata = {}
         items.append(
             {
                 "file": str(path),
                 "name": path.stem,
+                "source_product": metadata.get("source_product")
+                or _product_name(target_class),
+                "source_version": metadata.get("source_version"),
+                "owner": metadata.get("owner"),
+                "maturity": metadata.get("maturity", "draft"),
+                "last_reviewed": metadata.get("last_reviewed"),
+                "fixture": metadata.get("fixture"),
+                "expected": metadata.get("expected"),
                 "schema_version": mapping.get("schema_version"),
                 "class_uid": target_class.get("class_uid"),
                 "class_name": target_class.get("class_name"),
@@ -79,6 +90,10 @@ def catalog_markdown(items: list[dict[str, Any]]) -> str:
                 f"## {item['name']}",
                 "",
                 f"- File: `{item['file']}`",
+                f"- Source product: {item.get('source_product') or 'Unknown'}",
+                f"- Maturity: `{item.get('maturity') or 'draft'}`",
+                f"- Owner: `{item.get('owner') or 'unassigned'}`",
+                f"- Last reviewed: `{item.get('last_reviewed') or 'unknown'}`",
                 f"- Target class: {item.get('class_name') or 'Unknown'} "
                 f"(`{item.get('class_uid') or '-'}`)",
                 f"- Schema version: `{item.get('schema_version') or 'unspecified'}`",
@@ -98,3 +113,13 @@ def _as_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [item for item in value if isinstance(item, str)]
     return []
+
+
+def _product_name(target_class: dict[str, Any]) -> str | None:
+    metadata = target_class.get("metadata")
+    if isinstance(metadata, dict):
+        product = metadata.get("product")
+        if isinstance(product, dict) and product.get("name"):
+            return str(product["name"])
+    value = target_class.get("metadata.product.name")
+    return str(value) if value else None

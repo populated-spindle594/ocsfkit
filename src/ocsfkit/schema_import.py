@@ -41,6 +41,9 @@ def _load_schema_file(path: Path) -> dict[str, Any]:
         numeric_class_uid = _optional_int(class_uid)
         if numeric_class_uid is None:
             return {}
+        attributes = value.get("attributes") or value.get("fields") or {}
+        fields = _fields_from_attributes(attributes)
+        enum_map = _enums_from_attributes(attributes)
         return {
             "classes": {
                 str(class_uid): {
@@ -50,8 +53,11 @@ def _load_schema_file(path: Path) -> dict[str, Any]:
                     "category_name": str(value.get("category_name") or ""),
                     "required": sorted(value.get("required") or []),
                     "recommended": sorted(value.get("recommended") or []),
+                    "attributes": sorted(fields),
                 }
-            }
+            },
+            "fields": fields,
+            "enums": enum_map,
         }
     return {}
 
@@ -69,3 +75,32 @@ def _optional_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _fields_from_attributes(attributes: Any) -> dict[str, Any]:
+    if not isinstance(attributes, dict):
+        return {}
+    fields: dict[str, Any] = {}
+    for name, spec in attributes.items():
+        if not isinstance(name, str) or not isinstance(spec, dict):
+            continue
+        fields[name] = {
+            "type": str(spec.get("type") or spec.get("object_type") or "unknown"),
+            "required": str(spec.get("requirement", "")).lower() == "required"
+            or bool(spec.get("required", False)),
+            "recommended": str(spec.get("requirement", "")).lower() == "recommended"
+            or bool(spec.get("recommended", False)),
+            "caption": spec.get("caption") or spec.get("description"),
+            "deprecated": bool(spec.get("deprecated", False)),
+        }
+    return fields
+
+
+def _enums_from_attributes(attributes: Any) -> dict[str, Any]:
+    if not isinstance(attributes, dict):
+        return {}
+    enums: dict[str, Any] = {}
+    for name, spec in attributes.items():
+        if isinstance(spec, dict) and isinstance(spec.get("enum"), dict):
+            enums[name] = spec["enum"]
+    return enums

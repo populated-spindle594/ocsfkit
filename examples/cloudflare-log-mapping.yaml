@@ -6,7 +6,7 @@ target_class:
   category_name: Network Activity
 fields:
   time:
-    from: $.Datetime
+    from: "$.Datetime"
     transform: parse_timestamp
     required: true
   activity_id:
@@ -14,15 +14,21 @@ fields:
   activity_name:
     default: Traffic
   message:
-    from: $.WAFAction
+    from: "$.WAFAction"
   metadata.product.name:
     default: Cloudflare
   src_endpoint.ip:
-    from: $.ClientIP
+    from: "$.ClientIP"
   dst_endpoint.port:
     default: 443
 drop:
-  - $.EdgeResponseStatus
-  - $.Host
-  - $.Path
-
+- "$.EdgeResponseStatus"
+- "$.Host"
+- "$.Path"
+metadata:
+  source_product: Cloudflare Logs
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/cloudflare_log.json

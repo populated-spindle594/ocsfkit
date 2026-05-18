@@ -1,0 +1,27 @@
+{
+  "activity_id": 6,
+  "activity_name": "Traffic",
+  "category_name": "Network Activity",
+  "category_uid": 4,
+  "class_name": "Network Activity",
+  "class_uid": 4001,
+  "device": {
+    "hostname": "pa-fw-01"
+  },
+  "dst_endpoint": {
+    "ip": "198.51.100.200",
+    "port": 443
+  },
+  "message": "allow",
+  "metadata": {
+    "product": {
+      "name": "Palo Alto Networks Firewall"
+    },
+    "version": "1.7.0"
+  },
+  "src_endpoint": {
+    "ip": "10.0.0.10",
+    "port": 51515
+  },
+  "time": 1775478600000
+}

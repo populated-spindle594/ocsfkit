@@ -6,24 +6,30 @@ target_class:
   category_name: Findings
 fields:
   time:
-    from: $._time
+    from: "$._time"
     transform: parse_timestamp
     required: true
   severity:
-    from: $.urgency
+    from: "$.urgency"
     transform: title_case
   severity_id:
-    from: $.urgency
+    from: "$.urgency"
     transform: severity_text_to_id
     required: true
   message:
-    from: $.rule_name
+    from: "$.rule_name"
   metadata.product.name:
     default: Splunk Enterprise Security
   actor.user.name:
-    from: $.user
+    from: "$.user"
   src_endpoint.ip:
-    from: $.src
+    from: "$.src"
 drop:
-  - $.search_name
-
+- "$.search_name"
+metadata:
+  source_product: Splunk Enterprise Security
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/splunk_notable.json

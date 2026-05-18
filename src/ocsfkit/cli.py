@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 import yaml
 
+from ocsfkit.baseline import check_baseline, create_baseline
 from ocsfkit.catalog import catalog_markdown, mapping_catalog
 from ocsfkit.ci import (
     explanations_to_github_annotations,
@@ -23,6 +24,7 @@ from ocsfkit.mapping_test import run_mapping_tests
 from ocsfkit.models import DiffChange
 from ocsfkit.packs import list_packs, validate_pack
 from ocsfkit.paths import flatten_paths, query_field
+from ocsfkit.privacy import scan_events
 from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
 from ocsfkit.render import (
     console,
@@ -52,8 +54,10 @@ app = typer.Typer(
 )
 targets_app = typer.Typer(help="Search and inspect bundled OCSF target fields.")
 packs_app = typer.Typer(help="List and validate built-in mapping packs.")
+baseline_app = typer.Typer(help="Create and check approved mapping-quality baselines.")
 app.add_typer(targets_app, name="targets")
 app.add_typer(packs_app, name="pack")
+app.add_typer(baseline_app, name="baseline")
 
 
 OutputFormat = Annotated[str, typer.Option("--format", help="Output format: json or ndjson")]
@@ -83,6 +87,9 @@ def lint(
     warn_only: Annotated[
         bool, typer.Option("--warn-only", help="Exit zero even when errors exist")
     ] = False,
+    event_id_path: Annotated[
+        str | None, typer.Option("--event-id-path", help="Source path used to label events")
+    ] = None,
 ) -> None:
     """Validate OCSF-looking events against the minimal local registry."""
 
@@ -98,6 +105,8 @@ def lint(
             print_json([[issue.model_dump() for issue in issues] for issues in issues_by_event])
         else:
             render_lint(issues_by_event)
+        if event_id_path and not json_output and not sarif and not github_annotations:
+            _print_event_ids(events, event_id_path)
         has_error = any(issue.level == "error" for issues in issues_by_event for issue in issues)
         if has_error and not warn_only:
             raise typer.Exit(1)
@@ -174,6 +183,9 @@ def explain(
         bool,
         typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files"),
     ] = False,
+    event_id_path: Annotated[
+        str | None, typer.Option("--event-id-path", help="Source path used to label events")
+    ] = None,
 ) -> None:
     """Explain mapping decisions, data loss, missing targets, and confidence."""
 
@@ -204,9 +216,11 @@ def explain(
                 raise OCSFKitError("--html currently requires exactly one input event")
             _write_or_print(explanation_html(results[0].explanation), output)
             return
+        event_ids = _event_ids(load_events(input), event_id_path) if event_id_path else []
         for index, result in enumerate(results, start=1):
             if len(results) > 1:
-                console.rule(f"Event {index}")
+                label = event_ids[index - 1] if event_ids else index
+                console.rule(f"Event {label}")
             render_explanation(result.explanation)
 
     _run(command)
@@ -290,6 +304,9 @@ def scorecard_command(
     allow_unsafe_transforms: Annotated[
         bool, typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files")
     ] = False,
+    event_id_path: Annotated[
+        str | None, typer.Option("--event-id-path", help="Source path included in human output")
+    ] = None,
 ) -> None:
     """Grade mapping production readiness with coverage, lint, and strict checks."""
 
@@ -316,6 +333,8 @@ def scorecard_command(
             if markdown:
                 console.print(text)
         else:
+            if event_id_path:
+                console.print(f"[bold]Event ID path:[/bold] {event_id_path}")
             console.print(f"[bold]Grade:[/bold] {report.grade}")
             console.print(f"[bold]Passed:[/bold] {'yes' if report.passed else 'no'}")
             console.print(f"[bold]Events:[/bold] {report.events}")
@@ -363,6 +382,9 @@ def coverage_command(
         bool,
         typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files"),
     ] = False,
+    event_id_path: Annotated[
+        str | None, typer.Option("--event-id-path", help="Source path included in human output")
+    ] = None,
 ) -> None:
     """Report mapping coverage across an event stream."""
 
@@ -400,6 +422,8 @@ def coverage_command(
                 raise typer.Exit(1)
             return
         console.print(f"[bold]Events:[/bold] {report.events}")
+        if event_id_path:
+            console.print(f"[bold]Event ID path:[/bold] {event_id_path}")
         console.print(f"[bold]Average confidence:[/bold] {report.average_confidence:.3f}")
         console.print(f"[bold]Source field coverage:[/bold] {report.source_field_coverage:.3f}")
         if report.unmapped_source_fields:
@@ -529,6 +553,31 @@ def schema_drift_command(
         else:
             render_lint([issues])
         if issues and not warn_only:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("scan")
+def scan_command(
+    input: Annotated[str, typer.Argument(help="JSON, YAML, or NDJSON file to scan")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    warn_only: Annotated[
+        bool, typer.Option("--warn-only", help="Exit zero even when findings exist")
+    ] = False,
+) -> None:
+    """Scan fixtures or reports for likely secrets and sensitive identifiers."""
+
+    def command() -> None:
+        findings = scan_events(_load_scan_events(input))
+        if json_output:
+            print_json([finding.model_dump() for finding in findings])
+        else:
+            if not findings:
+                console.print("[green]No likely secrets or sensitive identifiers found[/green]")
+            for finding in findings:
+                console.print(f"[yellow]{finding.kind}[/] {finding.path}: {finding.value}")
+        if findings and not warn_only:
             raise typer.Exit(1)
 
     _run(command)
@@ -737,6 +786,65 @@ def pack_validate(
     _run(command)
 
 
+@baseline_app.command("create")
+def baseline_create(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    output: Annotated[str, typer.Option("--output", "-o", help="Baseline YAML output path")],
+    allow_unsafe_transforms: Annotated[
+        bool, typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files")
+    ] = False,
+) -> None:
+    """Create an approved baseline of current mapping gaps."""
+
+    def command() -> None:
+        mapping_doc = load_mapping_file(mapping)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping, allow_unsafe_transforms
+        )
+        baseline = create_baseline(list(iter_events(input)), mapping_doc, custom_transforms)
+        Path(output).write_text(yaml.safe_dump(baseline, sort_keys=False))
+        console.print(f"Wrote {output}")
+
+    _run(command)
+
+
+@baseline_app.command("check")
+def baseline_check(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    baseline: Annotated[str, typer.Option("--baseline", "-b", help="Baseline YAML path")],
+    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    warn_only: Annotated[
+        bool, typer.Option("--warn-only", help="Exit zero even when new gaps exist")
+    ] = False,
+    allow_unsafe_transforms: Annotated[
+        bool, typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files")
+    ] = False,
+) -> None:
+    """Fail only when mapping gaps appear beyond the approved baseline."""
+
+    def command() -> None:
+        mapping_doc = load_mapping_file(mapping)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping, allow_unsafe_transforms
+        )
+        result = check_baseline(baseline, list(iter_events(input)), mapping_doc, custom_transforms)
+        if json_output:
+            print_json(result.model_dump())
+        else:
+            if result.passed:
+                console.print("[green]Baseline check passed[/green]")
+            for path in result.new_unmapped_source_fields:
+                console.print(f"[red]New unmapped source field:[/red] {path}")
+            for path in result.new_missing_target_fields:
+                console.print(f"[red]New missing target field:[/red] {path}")
+        if not result.passed and not warn_only:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
 def _validate_format(format_name: str) -> None:
     if format_name not in {"json", "ndjson"}:
         raise OCSFKitError("--format must be one of: json, ndjson")
@@ -780,6 +888,18 @@ def _write_or_print(text: str, output: str | None) -> None:
         console.print(text)
 
 
+def _load_scan_events(input_path: str) -> list[dict]:
+    path = Path(input_path)
+    if not path.is_dir():
+        return load_events(input_path)
+    events: list[dict] = []
+    for candidate in sorted(path.rglob("*")):
+        if candidate.suffix.lower() not in {".json", ".yaml", ".yml", ".ndjson"}:
+            continue
+        events.extend(load_events(str(candidate)))
+    return events
+
+
 def _append_github_summary(text: str) -> None:
     import os
 
@@ -799,6 +919,18 @@ def _print_targets(targets: list[dict]) -> None:
             markers.append("recommended")
         suffix = f" ({', '.join(markers)})" if markers else ""
         console.print(f"{target['path']} [{target['type']}]{suffix}")
+
+
+def _event_ids(events: list[dict], event_id_path: str | None) -> list[object]:
+    if not event_id_path:
+        return []
+    return [query_field(event, event_id_path) for event in events]
+
+
+def _print_event_ids(events: list[dict], event_id_path: str) -> None:
+    console.print(f"[bold]Event IDs from {event_id_path}[/bold]")
+    for index, event_id in enumerate(_event_ids(events, event_id_path), start=1):
+        console.print(f"  event {index}: {event_id}")
 
 
 def _starter_fields(source_paths: list[str], product_name: str) -> dict[str, dict[str, str | bool]]:

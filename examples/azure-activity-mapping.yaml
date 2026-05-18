@@ -1,15 +1,13 @@
 schema_version: 1.7.0
-
 target_class:
   class_uid: 3002
   class_name: Authentication
   category_uid: 3
   category_name: Identity & Access Management
   metadata.product.name: Azure Activity Logs
-
 fields:
   time:
-    from: $.time
+    from: "$.time"
     transform: parse_timestamp
     required: true
   activity_id:
@@ -17,21 +15,27 @@ fields:
   activity_name:
     default: Logon
   actor.user.name:
-    from: $.caller
+    from: "$.caller"
   message:
-    from: $.operationName
+    from: "$.operationName"
   cloud.account_uid:
-    from: $.tenantId
+    from: "$.tenantId"
   cloud.region:
-    from: $.location
+    from: "$.location"
   status:
-    from: $.resultType
+    from: "$.resultType"
   status_id:
     default: 1
   resources[].name:
-    from: $.resourceId
+    from: "$.resourceId"
   resources[].type:
-    from: $.category
-
+    from: "$.category"
 drop:
-  - $.resourceGroupName
+- "$.resourceGroupName"
+metadata:
+  source_product: Azure Activity Logs
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/azure_activity_log.json

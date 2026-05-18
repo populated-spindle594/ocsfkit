@@ -1,0 +1,3 @@
+input: ../../fixtures/zeek_conn.json
+mapping: ../../examples/zeek-conn-mapping.yaml
+expected: expected/zeek-conn-mapping.json

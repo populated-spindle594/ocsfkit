@@ -1,0 +1,3 @@
+input: ../../fixtures/lacework_alert.json
+mapping: ../../examples/lacework-alert-mapping.yaml
+expected: expected/lacework-alert-mapping.json

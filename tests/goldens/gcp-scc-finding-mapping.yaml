@@ -1,0 +1,3 @@
+input: ../../fixtures/gcp_scc_finding.json
+mapping: ../../examples/gcp-scc-finding-mapping.yaml
+expected: expected/gcp-scc-finding-mapping.json

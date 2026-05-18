@@ -1,0 +1,3 @@
+input: ../../fixtures/sysmon_process_event.json
+mapping: ../../examples/sysmon-process-mapping.yaml
+expected: expected/sysmon-process-mapping.json

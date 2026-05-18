@@ -1,49 +1,42 @@
 schema_version: 1.7.0
-
 custom_transforms:
-  - custom_transforms.py
-
+- custom_transforms.py
 target_class:
   class_uid: 3002
   class_name: Authentication
   category_uid: 3
   category_name: Identity & Access Management
-
 fields:
   time:
-    from: $.published
+    from: "$.published"
     transform: parse_timestamp
     required: true
-
   activity_id:
     default: 1
-
   activity_name:
     default: Logon
-
   message:
-    from: $.displayMessage
-
+    from: "$.displayMessage"
   metadata.product.name:
     default: Okta
-
   actor.user.name:
-    from: $.actor.alternateId
-
+    from: "$.actor.alternateId"
   actor.user.uid:
-    from: $.actor.id
-
+    from: "$.actor.id"
   src_endpoint.ip:
-    from: $.client.ipAddress
-
+    from: "$.client.ipAddress"
   status:
-    from: $.outcome.result
+    from: "$.outcome.result"
     transform: normalize_login_status
-
   status_id:
-    from: $.outcome.result
+    from: "$.outcome.result"
     transform: login_status_to_id
-
 drop:
-  - $.debugContext
-
+- "$.debugContext"
+metadata:
+  source_product: Okta System Log
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/okta_login_event.json

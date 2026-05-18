@@ -6,22 +6,28 @@ target_class:
   category_name: Findings
 fields:
   time:
-    from: $.TimeGenerated
+    from: "$.TimeGenerated"
     transform: parse_timestamp
     required: true
   severity:
-    from: $.Severity
+    from: "$.Severity"
   severity_id:
-    from: $.Severity
+    from: "$.Severity"
     transform: severity_text_to_id
     required: true
   message:
-    from: $.AlertName
+    from: "$.AlertName"
   metadata.product.name:
-    from: $.ProviderName
+    from: "$.ProviderName"
   actor.user.name:
-    from: $.CompromisedEntity
+    from: "$.CompromisedEntity"
   cloud.account_uid:
-    from: $.TenantId
+    from: "$.TenantId"
 drop: []
-
+metadata:
+  source_product: Microsoft Sentinel
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/sentinel_alert.json

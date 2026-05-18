@@ -1,0 +1,28 @@
+{
+  "actor": {
+    "user": {
+      "name": "charlie"
+    }
+  },
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "device": {
+    "hostname": "win-workstation-01"
+  },
+  "message": "Suspicious PowerShell command",
+  "metadata": {
+    "product": {
+      "name": "CrowdStrike Falcon"
+    },
+    "version": "1.7.0"
+  },
+  "process": {
+    "name": "powershell.exe",
+    "pid": 4242
+  },
+  "severity": "High",
+  "severity_id": 4,
+  "time": 1775412010000
+}

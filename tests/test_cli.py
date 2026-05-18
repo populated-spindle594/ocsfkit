@@ -149,6 +149,37 @@ def test_coverage_markdown_smoke() -> None:
     assert "ocsfkit Coverage" in result.stdout
 
 
+def test_baseline_commands_smoke(tmp_path) -> None:
+    baseline = tmp_path / "baseline.yaml"
+    created = runner.invoke(
+        app,
+        [
+            "baseline",
+            "create",
+            "fixtures/guardduty.ndjson",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--output",
+            str(baseline),
+        ],
+    )
+    assert created.exit_code == 0
+    checked = runner.invoke(
+        app,
+        [
+            "baseline",
+            "check",
+            "fixtures/guardduty.ndjson",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--baseline",
+            str(baseline),
+        ],
+    )
+    assert checked.exit_code == 0
+    assert "passed" in checked.stdout
+
+
 def test_scorecard_smoke() -> None:
     result = runner.invoke(
         app,
@@ -208,6 +239,12 @@ def test_schema_drift_smoke() -> None:
     assert result.exit_code == 0
 
 
+def test_scan_smoke() -> None:
+    result = runner.invoke(app, ["scan", "fixtures/aws_guardduty_finding.json", "--warn-only"])
+    assert result.exit_code == 0
+    assert "account_id" in result.stdout
+
+
 def test_catalog_smoke() -> None:
     result = runner.invoke(app, ["catalog", "--json"])
     assert result.exit_code == 0
@@ -263,3 +300,9 @@ def test_pack_commands_smoke() -> None:
     validated = runner.invoke(app, ["pack", "validate", "--json"])
     assert validated.exit_code == 0
     assert "guardduty-mapping.yaml" in validated.stdout
+
+
+def test_golden_catalog_mapping_tests() -> None:
+    result = runner.invoke(app, ["test-mapping", "tests/goldens"])
+    assert result.exit_code == 0
+    assert "guardduty-mapping.yaml" in result.stdout

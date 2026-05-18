@@ -1,0 +1,3 @@
+input: ../../fixtures/sentinel_alert.json
+mapping: ../../examples/sentinel-alert-mapping.yaml
+expected: expected/sentinel-alert-mapping.json

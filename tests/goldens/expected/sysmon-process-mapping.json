@@ -1,0 +1,28 @@
+{
+  "activity_id": 1,
+  "activity_name": "Launch",
+  "actor": {
+    "user": {
+      "name": "EXAMPLE\\analyst"
+    }
+  },
+  "category_name": "System Activity",
+  "category_uid": 1,
+  "class_name": "Process Activity",
+  "class_uid": 1007,
+  "device": {
+    "hostname": "workstation-01.example.test"
+  },
+  "message": "powershell.exe -NoProfile -ExecutionPolicy Bypass",
+  "metadata": {
+    "product": {
+      "name": "Microsoft Sysmon"
+    },
+    "version": "1.7.0"
+  },
+  "process": {
+    "name": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "pid": 4242
+  },
+  "time": 1768383704000
+}

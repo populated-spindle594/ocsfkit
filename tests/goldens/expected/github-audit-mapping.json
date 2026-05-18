@@ -1,0 +1,28 @@
+{
+  "activity_id": 1,
+  "activity_name": "Launch",
+  "actor": {
+    "user": {
+      "name": "octo-user",
+      "uid": "123456"
+    }
+  },
+  "category_name": "System Activity",
+  "category_uid": 1,
+  "class_name": "Process Activity",
+  "class_uid": 1007,
+  "message": "repo.create",
+  "metadata": {
+    "product": {
+      "name": "GitHub Audit Log"
+    },
+    "version": "1.7.0"
+  },
+  "process": {
+    "name": "repo.create"
+  },
+  "src_endpoint": {
+    "ip": "192.0.2.55"
+  },
+  "time": 1775294400000
+}

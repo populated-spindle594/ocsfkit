@@ -1,0 +1,24 @@
+{
+  "actor": {
+    "user": {
+      "name": "dana"
+    }
+  },
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "message": "Multiple failed logins",
+  "metadata": {
+    "product": {
+      "name": "Splunk Enterprise Security"
+    },
+    "version": "1.7.0"
+  },
+  "severity": "High",
+  "severity_id": 4,
+  "src_endpoint": {
+    "ip": "198.51.100.77"
+  },
+  "time": 1775556000000
+}

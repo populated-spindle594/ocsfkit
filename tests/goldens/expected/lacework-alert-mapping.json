@@ -1,0 +1,28 @@
+{
+  "activity_id": 6,
+  "activity_name": "Traffic",
+  "category_name": "Network Activity",
+  "category_uid": 4,
+  "class_name": "Network Activity",
+  "class_uid": 4001,
+  "cloud": {
+    "account_uid": "111122223333"
+  },
+  "device": {
+    "hostname": "server-01"
+  },
+  "dst_endpoint": {
+    "ip": "203.0.113.88"
+  },
+  "message": "New external server connection",
+  "metadata": {
+    "product": {
+      "name": "Lacework"
+    },
+    "version": "1.7.0"
+  },
+  "src_endpoint": {
+    "ip": "10.2.3.4"
+  },
+  "time": 1775894950000
+}

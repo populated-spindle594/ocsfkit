@@ -1,0 +1,3 @@
+input: ../../fixtures/aws_guardduty_finding.json
+mapping: ../../examples/guardduty-mapping.yaml
+expected: expected/guardduty-mapping.json

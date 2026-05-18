@@ -17,7 +17,20 @@ def coverage_html(report: CoverageReport) -> str:
   <meta charset="utf-8">
   <title>ocsfkit Mapping Report</title>
   <style>
-    body {{ font-family: system-ui, sans-serif; margin: 32px; line-height: 1.5; }}
+    body {{ font-family: system-ui, sans-serif; margin: 32px; line-height: 1.5; color: #172033; }}
+    .summary {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }}
+    .metric {{
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f6f8fa;
+    }}
+    .metric strong {{ display: block; font-size: 24px; }}
+    input {{ width: 100%; box-sizing: border-box; padding: 8px; margin: 12px 0; }}
     table {{ border-collapse: collapse; width: 100%; }}
     th, td {{ border: 1px solid #d0d7de; padding: 8px; text-align: left; }}
     th {{ background: #f6f8fa; }}
@@ -25,14 +38,30 @@ def coverage_html(report: CoverageReport) -> str:
 </head>
 <body>
   <h1>ocsfkit Mapping Report</h1>
-  <p>Events: {report.events}</p>
-  <p>Average confidence: {report.average_confidence:.3f}</p>
-  <p>Source field coverage: {report.source_field_coverage:.3f}</p>
+  <div class="summary">
+    <div class="metric"><strong>{report.events}</strong>Events</div>
+    <div class="metric"><strong>{report.average_confidence:.3f}</strong>Average confidence</div>
+    <div class="metric">
+      <strong>{report.source_field_coverage:.3f}</strong>Source field coverage
+    </div>
+    <div class="metric">
+      <strong>{sum(report.unmapped_source_fields.values())}</strong>Unmapped fields
+    </div>
+  </div>
   <h2>Unmapped Source Fields</h2>
+  <input id="filter" placeholder="Filter table" oninput="filterRows()">
   <table>
     <thead><tr><th>Path</th><th>Count</th></tr></thead>
     <tbody>{rows}</tbody>
   </table>
+  <script>
+    function filterRows() {{
+      const needle = document.getElementById('filter').value.toLowerCase();
+      for (const row of document.querySelectorAll('tbody tr')) {{
+        row.style.display = row.textContent.toLowerCase().includes(needle) ? '' : 'none';
+      }}
+    }}
+  </script>
 </body>
 </html>
 """

@@ -1,42 +1,37 @@
 schema_version: 1.7.0
-
 target_class:
   class_uid: 1007
   class_name: Process Activity
   category_uid: 1
   category_name: System Activity
-
 fields:
   time:
-    from: $.@timestamp
+    from: "$.@timestamp"
     transform: parse_timestamp
     required: true
-
   activity_id:
     default: 1
-
   activity_name:
     default: Launch
-
   message:
-    from: $.action
-
+    from: "$.action"
   metadata.product.name:
     default: GitHub Audit Log
-
   actor.user.name:
-    from: $.actor
-
+    from: "$.actor"
   actor.user.uid:
-    from: $.actor_id
+    from: "$.actor_id"
     transform: to_string
-
   process.name:
-    from: $.action
-
+    from: "$.action"
   src_endpoint.ip:
-    from: $.ip
-
+    from: "$.ip"
 drop:
-  - $.user_agent
-
+- "$.user_agent"
+metadata:
+  source_product: GitHub Audit Log
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/github_audit_event.json

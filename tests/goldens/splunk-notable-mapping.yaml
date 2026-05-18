@@ -1,0 +1,3 @@
+input: ../../fixtures/splunk_notable.json
+mapping: ../../examples/splunk-notable-mapping.yaml
+expected: expected/splunk-notable-mapping.json

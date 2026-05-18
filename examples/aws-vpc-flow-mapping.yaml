@@ -1,15 +1,13 @@
 schema_version: 1.7.0
-
 target_class:
   class_uid: 4001
   class_name: Network Activity
   category_uid: 4
   category_name: Network Activity
   metadata.product.name: AWS VPC Flow Logs
-
 fields:
   time:
-    from: $.start
+    from: "$.start"
     transform: epoch_seconds_to_ms
     required: true
   activity_id:
@@ -17,28 +15,34 @@ fields:
   activity_name:
     default: Traffic
   src_endpoint.ip:
-    from: $.srcaddr
+    from: "$.srcaddr"
   src_endpoint.port:
-    from: $.srcport
+    from: "$.srcport"
   dst_endpoint.ip:
-    from: $.dstaddr
+    from: "$.dstaddr"
   dst_endpoint.port:
-    from: $.dstport
+    from: "$.dstport"
   cloud.account_uid:
-    from: $.account_id
+    from: "$.account_id"
   cloud.region:
-    from: $.region
+    from: "$.region"
   status:
-    from: $.action
+    from: "$.action"
   resources[].name:
-    from: $.interface_id
+    from: "$.interface_id"
   resources[].type:
     default: Network Interface
-
 drop:
-  - $.version
-  - $.packets
-  - $.bytes
-  - $.end
-  - $.protocol
-  - $.log_status
+- "$.version"
+- "$.packets"
+- "$.bytes"
+- "$.end"
+- "$.protocol"
+- "$.log_status"
+metadata:
+  source_product: AWS VPC Flow Logs
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/aws_vpc_flow_log.json

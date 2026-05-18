@@ -6,27 +6,33 @@ target_class:
   category_name: Findings
 fields:
   time:
-    from: $.createdAt
+    from: "$.createdAt"
     transform: parse_timestamp
     required: true
   severity:
-    from: $.severity
+    from: "$.severity"
     transform: title_case
   severity_id:
-    from: $.severity
+    from: "$.severity"
     transform: severity_text_to_id
     required: true
   message:
-    from: $.name
+    from: "$.name"
   metadata.product.name:
     default: Wiz
   cloud.account_uid:
-    from: $.cloudAccount
+    from: "$.cloudAccount"
   cloud.region:
-    from: $.region
+    from: "$.region"
   resources[].name:
-    from: $.resourceName
+    from: "$.resourceName"
   resources[].type:
-    from: $.resourceType
+    from: "$.resourceType"
 drop: []
-
+metadata:
+  source_product: Wiz
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/wiz_finding.json

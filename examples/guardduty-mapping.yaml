@@ -1,47 +1,42 @@
 schema_version: 1.7.0
-
 target_class:
   class_uid: 2004
   class_name: Detection Finding
   category_uid: 2
   category_name: Findings
-
 fields:
   time:
-    from: $.eventTime
+    from: "$.eventTime"
     transform: parse_timestamp
     required: true
-
   severity_id:
-    from: $.severity
+    from: "$.severity"
     transform: severity_text_to_id
     default: 1
     required: true
-
   severity:
-    from: $.severity
-
+    from: "$.severity"
   message:
-    from: $.title
-
+    from: "$.title"
   metadata.product.name:
     default: Amazon GuardDuty
-
   cloud.account_uid:
-    from: $.accountId
-
+    from: "$.accountId"
   cloud.region:
-    from: $.region
-
+    from: "$.region"
   actor.user.name:
-    from: $.service.action.awsApiCallAction.remoteIpDetails.organization.asnOrg
-
+    from: "$.service.action.awsApiCallAction.remoteIpDetails.organization.asnOrg"
   resources[].name:
-    from: $.resource.instanceDetails.instanceId
-
+    from: "$.resource.instanceDetails.instanceId"
   resources[].type:
     default: EC2 Instance
-
 drop:
-  - $.debug
-  - $.rawPayload
+- "$.debug"
+- "$.rawPayload"
+metadata:
+  source_product: Amazon GuardDuty
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/aws_guardduty_finding.json

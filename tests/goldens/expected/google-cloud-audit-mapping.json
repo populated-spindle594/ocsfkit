@@ -1,0 +1,33 @@
+{
+  "activity_id": 1,
+  "activity_name": "Logon",
+  "actor": {
+    "user": {
+      "name": "analyst@example.com"
+    }
+  },
+  "category_name": "Identity & Access Management",
+  "category_uid": 3,
+  "class_name": "Authentication",
+  "class_uid": 3002,
+  "cloud": {
+    "account_uid": "example-project",
+    "region": "global"
+  },
+  "message": "google.iam.admin.v1.CreateServiceAccountKey",
+  "metadata": {
+    "product": {
+      "name": "Google Cloud Audit Logs"
+    },
+    "version": "1.7.0"
+  },
+  "resources": [
+    {
+      "name": "projects/example-project/serviceAccounts/build@example-project.iam.gserviceaccount.com",
+      "type": "Google Cloud Resource"
+    }
+  ],
+  "status": "OK",
+  "status_id": 1,
+  "time": 1768383704000
+}

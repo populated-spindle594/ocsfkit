@@ -1,0 +1,34 @@
+{
+  "activity_id": 6,
+  "activity_name": "Traffic",
+  "category_name": "Network Activity",
+  "category_uid": 4,
+  "class_name": "Network Activity",
+  "class_uid": 4001,
+  "cloud": {
+    "account_uid": "111122223333",
+    "region": "us-east-1"
+  },
+  "dst_endpoint": {
+    "ip": "198.51.100.23",
+    "port": 443
+  },
+  "metadata": {
+    "product": {
+      "name": "AWS VPC Flow Logs"
+    },
+    "version": "1.7.0"
+  },
+  "resources": [
+    {
+      "name": "eni-0123456789abcdef0",
+      "type": "Network Interface"
+    }
+  ],
+  "src_endpoint": {
+    "ip": "10.0.1.10",
+    "port": 44321
+  },
+  "status": "ACCEPT",
+  "time": 1768386104000
+}

@@ -1,0 +1,3 @@
+input: ../../fixtures/cloudflare_log.json
+mapping: ../../examples/cloudflare-log-mapping.yaml
+expected: expected/cloudflare-log-mapping.json

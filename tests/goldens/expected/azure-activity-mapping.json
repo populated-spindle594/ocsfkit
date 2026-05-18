@@ -1,0 +1,33 @@
+{
+  "activity_id": 1,
+  "activity_name": "Logon",
+  "actor": {
+    "user": {
+      "name": "analyst@example.com"
+    }
+  },
+  "category_name": "Identity & Access Management",
+  "category_uid": 3,
+  "class_name": "Authentication",
+  "class_uid": 3002,
+  "cloud": {
+    "account_uid": "00000000-0000-0000-0000-000000000000",
+    "region": "eastus"
+  },
+  "message": "Microsoft.Authorization/roleAssignments/write",
+  "metadata": {
+    "product": {
+      "name": "Azure Activity Logs"
+    },
+    "version": "1.7.0"
+  },
+  "resources": [
+    {
+      "name": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-security-lab",
+      "type": "Administrative"
+    }
+  ],
+  "status": "Success",
+  "status_id": 1,
+  "time": 1768383704000
+}

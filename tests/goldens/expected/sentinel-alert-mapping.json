@@ -1,0 +1,24 @@
+{
+  "actor": {
+    "user": {
+      "name": "erin@example.com"
+    }
+  },
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "cloud": {
+    "account_uid": "00000000-0000-4000-8000-000000000003"
+  },
+  "message": "Impossible travel activity",
+  "metadata": {
+    "product": {
+      "name": "Microsoft Sentinel"
+    },
+    "version": "1.7.0"
+  },
+  "severity": "Medium",
+  "severity_id": 3,
+  "time": 1775646062000
+}

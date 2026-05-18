@@ -1,0 +1,3 @@
+input: ../../fixtures/azure_ad_signin.json
+mapping: ../../examples/azure-ad-signin-mapping.yaml
+expected: expected/azure-ad-signin-mapping.json

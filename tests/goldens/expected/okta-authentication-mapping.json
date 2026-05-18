@@ -1,0 +1,27 @@
+{
+  "activity_id": 1,
+  "activity_name": "Logon",
+  "actor": {
+    "user": {
+      "name": "alice@example.com",
+      "uid": "00u-example"
+    }
+  },
+  "category_name": "Identity & Access Management",
+  "category_uid": 3,
+  "class_name": "Authentication",
+  "class_uid": 3002,
+  "message": "User login to Okta",
+  "metadata": {
+    "product": {
+      "name": "Okta"
+    },
+    "version": "1.7.0"
+  },
+  "src_endpoint": {
+    "ip": "198.51.100.10"
+  },
+  "status": "Success",
+  "status_id": 1,
+  "time": 1775135521000
+}

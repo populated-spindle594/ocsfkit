@@ -1,0 +1,3 @@
+input: ../../fixtures/aws_securityhub_finding.json
+mapping: ../../examples/securityhub-mapping.yaml
+expected: expected/securityhub-mapping.json

@@ -1,0 +1,30 @@
+{
+  "activity_id": 1,
+  "activity_name": "Logon",
+  "actor": {
+    "user": {
+      "name": "analyst",
+      "uid": "S-1-5-21-0000000000-0000000000-0000000000-1105"
+    }
+  },
+  "category_name": "Identity & Access Management",
+  "category_uid": 3,
+  "class_name": "Authentication",
+  "class_uid": 3002,
+  "device": {
+    "hostname": "domain-controller-01.example.test"
+  },
+  "message": "Windows logon event",
+  "metadata": {
+    "product": {
+      "name": "Windows Security Event Log"
+    },
+    "version": "1.7.0"
+  },
+  "src_endpoint": {
+    "ip": "10.0.1.25"
+  },
+  "status": "Success",
+  "status_id": 1,
+  "time": 1768383704000
+}

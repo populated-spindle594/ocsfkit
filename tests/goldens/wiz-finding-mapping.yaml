@@ -1,0 +1,3 @@
+input: ../../fixtures/wiz_finding.json
+mapping: ../../examples/wiz-finding-mapping.yaml
+expected: expected/wiz-finding-mapping.json

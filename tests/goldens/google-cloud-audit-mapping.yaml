@@ -1,0 +1,3 @@
+input: ../../fixtures/google_cloud_audit_log.json
+mapping: ../../examples/google-cloud-audit-mapping.yaml
+expected: expected/google-cloud-audit-mapping.json

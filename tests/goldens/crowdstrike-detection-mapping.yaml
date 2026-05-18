@@ -1,0 +1,3 @@
+input: ../../fixtures/crowdstrike_detection.json
+mapping: ../../examples/crowdstrike-detection-mapping.yaml
+expected: expected/crowdstrike-detection-mapping.json

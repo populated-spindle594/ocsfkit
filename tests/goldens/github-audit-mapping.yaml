@@ -1,0 +1,3 @@
+input: ../../fixtures/github_audit_event.json
+mapping: ../../examples/github-audit-mapping.yaml
+expected: expected/github-audit-mapping.json

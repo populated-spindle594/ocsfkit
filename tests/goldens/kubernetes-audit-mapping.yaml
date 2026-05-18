@@ -1,0 +1,3 @@
+input: ../../fixtures/kubernetes_audit.json
+mapping: ../../examples/kubernetes-audit-mapping.yaml
+expected: expected/kubernetes-audit-mapping.json

@@ -1,0 +1,3 @@
+input: ../../fixtures/aws_vpc_flow_log.json
+mapping: ../../examples/aws-vpc-flow-mapping.yaml
+expected: expected/aws-vpc-flow-mapping.json

@@ -1,42 +1,38 @@
 schema_version: 1.7.0
-
 target_class:
   class_uid: 2004
   class_name: Detection Finding
   category_uid: 2
   category_name: Findings
-
 fields:
   time:
-    from: $.CreatedAt
+    from: "$.CreatedAt"
     transform: parse_timestamp
     required: true
-
   severity_id:
-    from: $.Severity.Label
+    from: "$.Severity.Label"
     transform: severity_text_to_id
     default: 1
     required: true
-
   severity:
-    from: $.Severity.Label
-
+    from: "$.Severity.Label"
   message:
-    from: $.Title
-
+    from: "$.Title"
   metadata.product.name:
-    from: $.ProductName
-
+    from: "$.ProductName"
   cloud.account_uid:
-    from: $.AwsAccountId
-
+    from: "$.AwsAccountId"
   cloud.region:
-    from: $.Region
-
+    from: "$.Region"
   resources[].name:
-    from: $.Resources[].Id
-
+    from: "$.Resources[].Id"
   resources[].type:
-    from: $.Resources[].Type
-
+    from: "$.Resources[].Type"
 drop: []
+metadata:
+  source_product: AWS Security Hub
+  source_version: example
+  owner: ocsfkit maintainers
+  maturity: example
+  last_reviewed: '2026-05-18'
+  fixture: fixtures/aws_securityhub_finding.json

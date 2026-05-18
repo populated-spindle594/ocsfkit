@@ -1,0 +1,31 @@
+{
+  "actor": {
+    "user": {
+      "name": "Example ISP"
+    }
+  },
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "cloud": {
+    "account_uid": "111122223333",
+    "region": "us-east-1"
+  },
+  "message": "EC2 instance i-0123456789abcdef0 communicating with suspicious host",
+  "metadata": {
+    "product": {
+      "name": "Amazon GuardDuty"
+    },
+    "version": "1.7.0"
+  },
+  "resources": [
+    {
+      "name": "i-0123456789abcdef0",
+      "type": "EC2 Instance"
+    }
+  ],
+  "severity": "High",
+  "severity_id": 4,
+  "time": 1768386104000
+}

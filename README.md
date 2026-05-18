@@ -492,6 +492,7 @@ More workflow documentation:
 
 - [Getting Started](docs/getting-started.md)
 - [Install Guide](docs/install.md)
+- [CI Examples](docs/ci.md)
 - [Mapping Guide](docs/mapping-guide.md)
 - [Mapping Catalog](docs/mapping-catalog.md)
 - [Real-World Workflows](docs/real-world-workflows.md)
@@ -529,7 +530,7 @@ ocsfkit = "ocsfkit.cli:app"
 
 The repository is configured for normal Python and Homebrew releases:
 
-1. Tag a version, for example `git tag v0.5.0 && git push --tags`.
+1. Tag a version, for example `git tag v0.6.0 && git push --tags`.
 2. `.github/workflows/release.yml` builds source and wheel distributions.
 3. PyPI publishing uses Trusted Publishing when configured, with
    `PYPI_API_TOKEN` as a fallback.

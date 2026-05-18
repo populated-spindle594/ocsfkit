@@ -1,0 +1,28 @@
+{
+  "activity_id": 1,
+  "activity_name": "Logon",
+  "actor": {
+    "user": {
+      "name": "alice",
+      "uid": "AIDAEXAMPLE"
+    }
+  },
+  "category_name": "Identity & Access Management",
+  "category_uid": 3,
+  "class_name": "Authentication",
+  "class_uid": 3002,
+  "cloud": {
+    "account_uid": "777788889999",
+    "region": "us-east-2"
+  },
+  "message": "ConsoleLogin",
+  "metadata": {
+    "product": {
+      "name": "AWS CloudTrail"
+    },
+    "version": "1.7.0"
+  },
+  "status": "Failure",
+  "status_id": 2,
+  "time": 1772683870000
+}

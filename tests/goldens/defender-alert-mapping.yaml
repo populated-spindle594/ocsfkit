@@ -1,0 +1,3 @@
+input: ../../fixtures/defender_alert.json
+mapping: ../../examples/defender-alert-mapping.yaml
+expected: expected/defender-alert-mapping.json

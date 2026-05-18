@@ -1,0 +1,22 @@
+{
+  "activity_id": 6,
+  "activity_name": "Traffic",
+  "category_name": "Network Activity",
+  "category_uid": 4,
+  "class_name": "Network Activity",
+  "class_uid": 4001,
+  "dst_endpoint": {
+    "port": 443
+  },
+  "message": "block",
+  "metadata": {
+    "product": {
+      "name": "Cloudflare"
+    },
+    "version": "1.7.0"
+  },
+  "src_endpoint": {
+    "ip": "198.51.100.90"
+  },
+  "time": 1776075072000
+}

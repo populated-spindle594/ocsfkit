@@ -1,0 +1,3 @@
+input: ../../fixtures/cloudtrail_event.json
+mapping: ../../examples/cloudtrail-console-login-mapping.yaml
+expected: expected/cloudtrail-console-login-mapping.json

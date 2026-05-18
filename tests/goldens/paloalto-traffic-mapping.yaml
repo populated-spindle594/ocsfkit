@@ -1,0 +1,3 @@
+input: ../../fixtures/paloalto_traffic.json
+mapping: ../../examples/paloalto-traffic-mapping.yaml
+expected: expected/paloalto-traffic-mapping.json

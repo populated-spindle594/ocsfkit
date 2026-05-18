@@ -1,0 +1,22 @@
+{
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "cloud": {
+    "account_uid": "00000000-0000-4000-8000-000000000004"
+  },
+  "device": {
+    "hostname": "host01.example.com"
+  },
+  "message": "Malware detected",
+  "metadata": {
+    "product": {
+      "name": "Microsoft Defender"
+    },
+    "version": "1.7.0"
+  },
+  "severity": "High",
+  "severity_id": 4,
+  "time": 1775703845000
+}
