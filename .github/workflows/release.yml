@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   build:
@@ -28,17 +27,26 @@ jobs:
   publish-pypi:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ vars.PYPI_PUBLISH_ENABLED == 'true' }}
     environment:
       name: pypi
       url: https://pypi.org/p/ocsfkit
+    env:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
+      - name: Require PyPI token
+        if: ${{ env.PYPI_API_TOKEN == '' }}
+        run: |
+          echo "PYPI_API_TOKEN repository secret is required for PyPI publishing." >&2
+          exit 1
       - name: Publish to PyPI
+        if: ${{ env.PYPI_API_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
   github-release:
     needs: build
