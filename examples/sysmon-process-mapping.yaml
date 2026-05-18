@@ -1,0 +1,32 @@
+schema_version: 1.7.0
+
+target_class:
+  class_uid: 1007
+  class_name: Process Activity
+  category_uid: 1
+  category_name: System Activity
+  metadata.product.name: Microsoft Sysmon
+
+fields:
+  time:
+    from: $.UtcTime
+    transform: parse_timestamp
+    required: true
+  activity_id:
+    default: 1
+  activity_name:
+    default: Launch
+  device.hostname:
+    from: $.Computer
+  actor.user.name:
+    from: $.User
+  process.name:
+    from: $.Image
+  process.pid:
+    from: $.ProcessId
+  message:
+    from: $.CommandLine
+
+drop:
+  - $.EventID
+  - $.ParentImage

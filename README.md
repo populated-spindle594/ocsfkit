@@ -33,6 +33,7 @@ guessed, which source fields were dropped, and what is still missing.
 - [Mapping Files](#mapping-files)
 - [Built-In OCSF Scope](#built-in-ocsf-scope)
 - [Fixtures and Examples](#fixtures-and-examples)
+- [Production Use](#production-use)
 - [Development](#development)
 - [Release Automation](#release-automation)
 
@@ -84,7 +85,7 @@ ocsfkit explain fixtures/aws_guardduty_finding.json \
 Gate a stream in CI:
 
 ```bash
-ocsfkit coverage fixtures/guardduty.ndjson \
+ocsfkit scorecard fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \
   --min-confidence 0.70 \
   --max-unmapped 10 \
@@ -204,6 +205,26 @@ ocsfkit coverage fixtures/guardduty.ndjson \
   --markdown
 ```
 
+### Scorecard output
+
+```bash
+ocsfkit scorecard fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.70 \
+  --max-unmapped 10
+```
+
+```text
+Grade: C
+Passed: yes
+Events: 2
+Average confidence: 0.734
+Source field coverage: 0.889
+Unmapped source fields: 4
+Missing target fields: 0
+Lint errors: 0
+```
+
 ```markdown
 ## ocsfkit Coverage
 
@@ -241,6 +262,12 @@ not a finished answer. Review unmapped fields before production use.
 ocsfkit lint fixtures/ocsf_detection_finding.json --sarif
 
 ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --github-summary
+
+ocsfkit scorecard fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \
   --min-confidence 0.80 \
   --max-unmapped 25 \
@@ -284,9 +311,13 @@ families such as AWS, identity, network, detections, and infrastructure.
 | `diff <before> <after>` | Compare two OCSF events or same-length event streams. |
 | `query <input> <path>` | Extract common OCSF fields with dotted paths. |
 | `coverage <input> --mapping mapping.yaml` | Summarize mapping quality across a stream and enforce quality budgets. |
+| `scorecard <input> --mapping mapping.yaml` | Grade mapping readiness with coverage, lint, and strict checks. |
 | `validate-mapping mapping.yaml` | Check mapping syntax, transforms, and likely schema issues. |
+| `schema-drift mapping.yaml` | Compare a mapping against bundled or synced schema data. |
+| `catalog` | Generate Markdown or JSON docs from mapping YAML files. |
 | `init-mapping <input>` | Generate a starter mapping worksheet from a representative event. |
 | `test-mapping spec.yaml` | Run fixture-based mapping regression tests. |
+| `test-transform spec.yaml` | Run YAML-defined tests for built-in or custom transforms. |
 | `report <input> --mapping mapping.yaml` | Write a standalone HTML mapping coverage report. |
 | `workshop <input>` | Print a guided mapping worksheet and optional explanation report. |
 | `schema` | Print the bundled minimal OCSF registry. |
@@ -303,6 +334,8 @@ ocsfkit explain sample.json --mapping mapping.yaml --markdown
 ocsfkit explain sample.json --mapping mapping.yaml --html --output explanation.html
 ocsfkit lint sample.json --github-annotations
 ocsfkit coverage sample.ndjson --mapping mapping.yaml --github-summary
+ocsfkit scorecard sample.ndjson --mapping mapping.yaml --markdown
+ocsfkit catalog --output docs/mapping-catalog.md
 ```
 
 Strict mode is available on mapping-quality commands:
@@ -312,6 +345,7 @@ ocsfkit map sample.json --mapping mapping.yaml --strict
 ocsfkit explain sample.json --mapping mapping.yaml --strict
 ocsfkit coverage sample.ndjson --mapping mapping.yaml --strict
 ocsfkit validate-mapping mapping.yaml --strict
+ocsfkit schema-drift mapping.yaml
 ```
 
 Strict mode fails on guessed fields, missing targets, and unmapped source fields.
@@ -420,9 +454,12 @@ Included source fixtures cover:
 - AWS GuardDuty
 - AWS Security Hub
 - AWS CloudTrail
+- AWS VPC Flow Logs
 - Azure AD sign-in
+- Azure Activity Logs
 - Okta login
 - GitHub Audit Log
+- Google Cloud Audit Logs
 - CrowdStrike detection
 - Palo Alto traffic
 - Zeek connection logs
@@ -434,12 +471,18 @@ Included source fixtures cover:
 - GCP Security Command Center findings
 - Cloudflare logs
 - Kubernetes audit events
+- Microsoft Sysmon process events
+- Windows Security authentication events
 
 Important files:
 
 - [GuardDuty mapping](examples/guardduty-mapping.yaml)
 - [Security Hub mapping](examples/securityhub-mapping.yaml)
 - [CloudTrail console login mapping](examples/cloudtrail-console-login-mapping.yaml)
+- [AWS VPC Flow Logs mapping](examples/aws-vpc-flow-mapping.yaml)
+- [Google Cloud Audit mapping](examples/google-cloud-audit-mapping.yaml)
+- [Sysmon process mapping](examples/sysmon-process-mapping.yaml)
+- [Windows Security authentication mapping](examples/windows-security-auth-mapping.yaml)
 - [Custom transform module](examples/custom_transforms.py)
 - [OCSF Detection Finding fixture](fixtures/ocsf_detection_finding.json)
 - [Broken OCSF fixture](fixtures/broken_ocsf_event.json)
@@ -448,9 +491,25 @@ Important files:
 More workflow documentation:
 
 - [Getting Started](docs/getting-started.md)
+- [Install Guide](docs/install.md)
 - [Mapping Guide](docs/mapping-guide.md)
+- [Mapping Catalog](docs/mapping-catalog.md)
 - [Real-World Workflows](docs/real-world-workflows.md)
 - [Static Docs Site](docs/site/index.html)
+
+## Production Use
+
+`ocsfkit` includes supporting files for common production paths:
+
+- `Dockerfile` for containerized CI or build-agent usage.
+- `.github/workflows/docker.yml` for GHCR image builds on pushes and tagged releases.
+- `.pre-commit-hooks.yaml` for validating mappings before commit.
+- `ocsfkit scorecard` for a single pass/fail readiness gate.
+- `ocsfkit catalog` for generated mapping documentation.
+- `ocsfkit schema-drift` for checking mappings against bundled or synced schema data.
+
+See the [Install Guide](docs/install.md) for `pipx`, `uvx`, `pip`, Homebrew,
+Docker, GitHub Actions, and pre-commit examples.
 
 ## Development
 

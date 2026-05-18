@@ -1,0 +1,9 @@
+cases:
+  - name: severity text
+    transform: severity_text_to_id
+    input: High
+    expected: 4
+  - name: epoch seconds
+    transform: epoch_seconds_to_ms
+    input: 1768386104
+    expected: 1768386104000

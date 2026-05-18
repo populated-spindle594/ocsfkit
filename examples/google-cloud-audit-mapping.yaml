@@ -1,0 +1,38 @@
+schema_version: 1.7.0
+
+target_class:
+  class_uid: 3002
+  class_name: Authentication
+  category_uid: 3
+  category_name: Identity & Access Management
+  metadata.product.name: Google Cloud Audit Logs
+
+fields:
+  time:
+    from: $.timestamp
+    transform: parse_timestamp
+    required: true
+  activity_id:
+    default: 1
+  activity_name:
+    default: Logon
+  actor.user.name:
+    from: $.protoPayload.authenticationInfo.principalEmail
+  message:
+    from: $.protoPayload.methodName
+  cloud.account_uid:
+    from: $.resource.labels.project_id
+  cloud.region:
+    from: $.resource.labels.location
+  status:
+    from: $.protoPayload.status.message
+  status_id:
+    default: 1
+  resources[].name:
+    from: $.protoPayload.resourceName
+  resources[].type:
+    default: Google Cloud Resource
+
+drop:
+  - $.severity
+  - $.protoPayload.status.code

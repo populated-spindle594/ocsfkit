@@ -12,6 +12,22 @@ from ocsfkit.models import DiffChange
 from ocsfkit.transforms import load_custom_transforms
 
 
+def run_mapping_tests(path: str) -> list[dict[str, Any]]:
+    root = Path(path)
+    specs = _mapping_specs(root) if root.is_dir() else [root]
+    results: list[dict[str, Any]] = []
+    for spec in specs:
+        changes = run_mapping_test(str(spec))
+        results.append(
+            {
+                "spec": str(spec),
+                "passed": not changes,
+                "changes": [change.model_dump() for change in changes],
+            }
+        )
+    return results
+
+
 def run_mapping_test(spec_path: str) -> list[DiffChange]:
     spec = yaml.safe_load(Path(spec_path).read_text())
     mapping_path = Path(spec_path).parent / spec["mapping"]
@@ -26,6 +42,15 @@ def run_mapping_test(spec_path: str) -> list[DiffChange]:
     return diff_events(expected, actual)
 
 
+def _mapping_specs(root: Path) -> list[Path]:
+    specs: list[Path] = []
+    for path in sorted(root.glob("*.yaml")):
+        spec = yaml.safe_load(path.read_text())
+        if isinstance(spec, dict) and {"input", "mapping", "expected"} <= set(spec):
+            specs.append(path)
+    return specs
+
+
 def write_mapping_test(
     spec_path: str,
     input_path: str,
@@ -38,4 +63,3 @@ def write_mapping_test(
         "expected": expected_path,
     }
     Path(spec_path).write_text(yaml.safe_dump(spec, sort_keys=False))
-

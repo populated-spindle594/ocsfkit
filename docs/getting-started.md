@@ -159,6 +159,17 @@ ocsfkit coverage fixtures/guardduty.ndjson \
 The command exits non-zero when a budget fails. JSON mode includes
 `threshold_failures` so CI logs and dashboards can explain the failure.
 
+For a single production-readiness gate that combines coverage, lint, and
+strict-mode checks, use `scorecard`:
+
+```bash
+ocsfkit scorecard fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --github-summary
+```
+
 For review meetings or tickets, generate a standalone HTML report:
 
 ```bash
@@ -182,6 +193,7 @@ Run it with:
 
 ```bash
 ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+ocsfkit test-mapping tests/fixtures
 ```
 
 If the mapping output changes, `test-mapping` prints a semantic diff and exits
@@ -213,6 +225,15 @@ and explanation output together:
 ```bash
 ocsfkit workshop fixtures/splunk_notable.json \
   --mapping examples/splunk-notable-mapping.yaml
+```
+
+For an interactive first pass, write accepted mappings and drops directly to a
+new YAML file:
+
+```bash
+ocsfkit workshop fixtures/splunk_notable.json \
+  --interactive \
+  --output splunk-draft.yaml
 ```
 
 `init-mapping` can generate a starter YAML from common field names:
@@ -259,4 +280,17 @@ Review the included mapping packs:
 ```bash
 ocsfkit pack list
 ocsfkit pack validate
+```
+
+Generate the mapping catalog and check for schema drift:
+
+```bash
+ocsfkit catalog --output docs/mapping-catalog.md
+ocsfkit schema-drift examples/guardduty-mapping.yaml
+```
+
+Custom transform behavior can be tested with YAML cases:
+
+```bash
+ocsfkit test-transform tests/fixtures/transform-test.yaml
 ```

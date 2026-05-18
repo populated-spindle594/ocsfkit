@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 import yaml
 
+from ocsfkit.catalog import catalog_markdown, mapping_catalog
 from ocsfkit.ci import (
     explanations_to_github_annotations,
     lint_issues_to_github_annotations,
@@ -14,10 +15,12 @@ from ocsfkit.ci import (
 )
 from ocsfkit.coverage import enforce_coverage_thresholds, mapping_coverage
 from ocsfkit.diff import diff_events
+from ocsfkit.drift import mapping_schema_drift
 from ocsfkit.errors import OCSFKitError, QueryError
 from ocsfkit.io import iter_events, load_events, load_mapping_file
 from ocsfkit.mapping import apply_mapping
-from ocsfkit.mapping_test import run_mapping_test
+from ocsfkit.mapping_test import run_mapping_tests
+from ocsfkit.models import DiffChange
 from ocsfkit.packs import list_packs, validate_pack
 from ocsfkit.paths import flatten_paths, query_field
 from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
@@ -33,9 +36,11 @@ from ocsfkit.report import coverage_html, explanation_html
 from ocsfkit.schema import bundled_schema
 from ocsfkit.schema_import import import_schema
 from ocsfkit.schema_sync import sync_schema
+from ocsfkit.scorecard import mapping_scorecard, scorecard_markdown
 from ocsfkit.strict import strict_mapping_failures
 from ocsfkit.summary import coverage_markdown, explanation_markdown
 from ocsfkit.targets import list_targets, search_targets, show_target
+from ocsfkit.transform_test import run_transform_tests
 from ocsfkit.validation import validate_mapping_doc
 
 app = typer.Typer(
@@ -261,6 +266,76 @@ def query(
     _run(command)
 
 
+@app.command("scorecard")
+def scorecard_command(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    markdown: Annotated[bool, typer.Option("--markdown", help="Emit Markdown")] = False,
+    github_summary: Annotated[
+        bool, typer.Option("--github-summary", help="Append Markdown to GITHUB_STEP_SUMMARY")
+    ] = False,
+    min_confidence: Annotated[
+        float, typer.Option("--min-confidence", help="Fail below this average confidence")
+    ] = 0.8,
+    max_unmapped: Annotated[
+        int, typer.Option("--max-unmapped", help="Fail above this unmapped source field count")
+    ] = 0,
+    max_lint_errors: Annotated[
+        int, typer.Option("--max-lint-errors", help="Fail above this mapped-event lint error count")
+    ] = 0,
+    strict: Annotated[
+        bool, typer.Option("--strict", help="Fail on guessed, missing, or unmapped fields")
+    ] = False,
+    allow_unsafe_transforms: Annotated[
+        bool, typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files")
+    ] = False,
+) -> None:
+    """Grade mapping production readiness with coverage, lint, and strict checks."""
+
+    def command() -> None:
+        mapping_doc = load_mapping_file(mapping)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping, allow_unsafe_transforms or not strict
+        )
+        report = mapping_scorecard(
+            iter_events(input),
+            mapping_doc,
+            custom_transforms,
+            min_confidence=min_confidence,
+            max_unmapped=max_unmapped,
+            max_lint_errors=max_lint_errors,
+            strict=strict,
+        )
+        if json_output:
+            print_json(report.model_dump())
+        elif markdown or github_summary:
+            text = scorecard_markdown(report)
+            if github_summary:
+                _append_github_summary(text)
+            if markdown:
+                console.print(text)
+        else:
+            console.print(f"[bold]Grade:[/bold] {report.grade}")
+            console.print(f"[bold]Passed:[/bold] {'yes' if report.passed else 'no'}")
+            console.print(f"[bold]Events:[/bold] {report.events}")
+            console.print(f"[bold]Average confidence:[/bold] {report.average_confidence:.3f}")
+            console.print(f"[bold]Source field coverage:[/bold] {report.source_field_coverage:.3f}")
+            console.print(
+                f"[bold]Unmapped source fields:[/bold] {report.unmapped_source_field_count}"
+            )
+            console.print(
+                f"[bold]Missing target fields:[/bold] {report.missing_target_field_count}"
+            )
+            console.print(f"[bold]Lint errors:[/bold] {report.lint_error_count}")
+            for failure in report.failures:
+                console.print(f"[red]{failure}[/red]")
+        if not report.passed:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
 @app.command("coverage")
 def coverage_command(
     input: Annotated[
@@ -433,22 +508,98 @@ def sync_schema_command(
     _run(command)
 
 
-@app.command("test-mapping")
-def test_mapping_command(
-    spec: Annotated[str, typer.Argument(help="Mapping test YAML path")],
+@app.command("schema-drift")
+def schema_drift_command(
+    mapping: Annotated[str, typer.Argument(help="Mapping YAML path")],
+    schema: Annotated[
+        str | None, typer.Option("--schema", help="Optional compact schema JSON/YAML path")
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    warn_only: Annotated[
+        bool, typer.Option("--warn-only", help="Exit zero even when drift is found")
+    ] = False,
 ) -> None:
-    """Run a mapping fixture test against expected OCSF output."""
+    """Compare a mapping against bundled or synced schema data."""
 
     def command() -> None:
-        changes = run_mapping_test(spec)
+        schema_doc = yaml.safe_load(Path(schema).read_text()) if schema else None
+        issues = mapping_schema_drift(load_mapping_file(mapping), schema_doc)
         if json_output:
-            print_json([change.model_dump() for change in changes])
-        elif changes:
-            render_diff([changes])
+            print_json([issue.model_dump() for issue in issues])
         else:
-            console.print("[green]Mapping test passed[/green]")
-        if changes:
+            render_lint([issues])
+        if issues and not warn_only:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("catalog")
+def catalog_command(
+    root: Annotated[
+        str, typer.Option("--root", help="Directory containing mapping YAML files")
+    ] = "examples",
+    output: Annotated[
+        str | None, typer.Option("--output", "-o", help="Write Markdown catalog to a file")
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Generate a catalog from mapping YAML files."""
+
+    def command() -> None:
+        items = mapping_catalog(root)
+        if json_output:
+            print_json(items)
+            return
+        _write_or_print(catalog_markdown(items), output)
+
+    _run(command)
+
+
+@app.command("test-mapping")
+def test_mapping_command(
+    spec: Annotated[str, typer.Argument(help="Mapping test YAML path or directory")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Run one or more mapping fixture tests against expected OCSF output."""
+
+    def command() -> None:
+        results = run_mapping_tests(spec)
+        if json_output:
+            print_json(results)
+        else:
+            for result in results:
+                if result["passed"]:
+                    console.print(f"[green]{result['spec']}: passed[/green]")
+                else:
+                    console.print(f"[red]{result['spec']}: failed[/red]")
+                    changes = [DiffChange(**change) for change in result["changes"]]
+                    render_diff([changes])
+        if any(not result["passed"] for result in results):
+            raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("test-transform")
+def test_transform_command(
+    spec: Annotated[str, typer.Argument(help="Transform test YAML path")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Run YAML-defined tests for built-in or custom transforms."""
+
+    def command() -> None:
+        results = run_transform_tests(spec)
+        if json_output:
+            print_json(results)
+        else:
+            for result in results:
+                color = "green" if result["passed"] else "red"
+                console.print(f"[{color}]{result['name']}: {result['transform']}[/]")
+                if not result["passed"]:
+                    console.print(f"  expected: {result['expected']!r}")
+                    console.print(f"  actual:   {result['actual']!r}")
+        if any(not result["passed"] for result in results):
             raise typer.Exit(1)
 
     _run(command)
@@ -478,6 +629,12 @@ def workshop_command(
     mapping: Annotated[
         str | None, typer.Option("--mapping", "-m", help="Existing mapping YAML path")
     ] = None,
+    interactive: Annotated[
+        bool, typer.Option("--interactive", help="Prompt through source fields and write a mapping")
+    ] = False,
+    output: Annotated[
+        str | None, typer.Option("--output", "-o", help="Mapping YAML path for interactive mode")
+    ] = None,
 ) -> None:
     """Print a guided mapping review worksheet for a sample event."""
 
@@ -492,7 +649,9 @@ def workshop_command(
             custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
             explanation = apply_mapping(event, mapping_doc, custom_transforms).explanation
             render_explanation(explanation)
-        else:
+        if interactive:
+            _interactive_mapping_review(source_paths, output)
+        elif not mapping:
             console.print("\nRun init-mapping to generate a starter YAML.")
 
     _run(command)
@@ -672,6 +831,40 @@ def _starter_fields(source_paths: list[str], product_name: str) -> dict[str, dic
             "required": True,
         }
     return fields
+
+
+def _interactive_mapping_review(source_paths: list[str], output: str | None) -> None:
+    if not output:
+        raise OCSFKitError("--interactive requires --output")
+    mapping: dict[str, object] = {
+        "schema_version": DEFAULT_SCHEMA_VERSION,
+        "target_class": {
+            "class_uid": 2004,
+            "class_name": "Detection Finding",
+            "category_uid": 2,
+            "category_name": "Findings",
+        },
+        "fields": {},
+        "drop": [],
+    }
+    fields: dict[str, dict[str, str]] = {}
+    drops: list[str] = []
+    console.print("\n[bold]Interactive review[/bold]")
+    console.print("For each source path, enter an OCSF target path, 'drop', or blank to skip.")
+    for source_path in source_paths:
+        if "[]" in source_path:
+            continue
+        answer = typer.prompt(source_path, default="", show_default=False).strip()
+        if not answer:
+            continue
+        if answer.lower() == "drop":
+            drops.append(source_path)
+            continue
+        fields[answer] = {"from": source_path}
+    mapping["fields"] = fields
+    mapping["drop"] = drops
+    Path(output).write_text(yaml.safe_dump(mapping, sort_keys=False))
+    console.print(f"Wrote {output}")
 
 
 def _find_source_path(source_paths: list[str], names: tuple[str, ...]) -> str | None:

@@ -1,0 +1,36 @@
+schema_version: 1.7.0
+
+target_class:
+  class_uid: 3002
+  class_name: Authentication
+  category_uid: 3
+  category_name: Identity & Access Management
+  metadata.product.name: Windows Security Event Log
+
+fields:
+  time:
+    from: $.System.TimeCreated
+    transform: parse_timestamp
+    required: true
+  activity_id:
+    default: 1
+  activity_name:
+    default: Logon
+  device.hostname:
+    from: $.System.Computer
+  actor.user.name:
+    from: $.EventData.TargetUserName
+  actor.user.uid:
+    from: $.EventData.TargetUserSid
+  src_endpoint.ip:
+    from: $.EventData.IpAddress
+  status:
+    from: $.EventData.Status
+  status_id:
+    default: 1
+  message:
+    default: Windows logon event
+
+drop:
+  - $.System.EventID
+  - $.EventData.LogonType

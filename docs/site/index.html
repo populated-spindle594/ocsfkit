@@ -102,8 +102,8 @@ ocsfkit explain event.json --mapping mapping.yaml</code></pre>
           <p>See mapped, transformed, defaulted, guessed, dropped, unmapped, and missing fields.</p>
         </div>
         <div class="card">
-          <h2>Mapping Coverage</h2>
-          <p>Measure unmapped source fields and confidence across NDJSON event streams.</p>
+          <h2>Scorecards</h2>
+          <p>Grade mapping readiness with coverage, lint, strict checks, and CI summaries.</p>
         </div>
         <div class="card">
           <h2>CI Output</h2>
@@ -111,11 +111,11 @@ ocsfkit explain event.json --mapping mapping.yaml</code></pre>
         </div>
       </section>
       <h2>Examples</h2>
-      <p>Included mappings cover AWS GuardDuty, AWS Security Hub, CloudTrail, Okta, Entra ID, GitHub audit logs, CrowdStrike, Palo Alto traffic, Zeek, Splunk ES, Sentinel, Defender, Wiz, Lacework, GCP SCC, Cloudflare, and Kubernetes audit logs.</p>
+      <p>Included mappings cover AWS GuardDuty, AWS Security Hub, CloudTrail, VPC Flow Logs, Okta, Entra ID, Azure Activity Logs, Google Cloud Audit Logs, GitHub audit logs, CrowdStrike, Palo Alto traffic, Zeek, Splunk ES, Sentinel, Defender, Wiz, Lacework, GCP SCC, Cloudflare, Kubernetes audit logs, Sysmon, and Windows Security events.</p>
       <pre><code>ocsfkit map fixtures/aws_guardduty_finding.json \
   --mapping examples/guardduty-mapping.yaml
 
-ocsfkit coverage fixtures/guardduty.ndjson \
+ocsfkit scorecard fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \
   --min-confidence 0.80 \
   --max-unmapped 25
@@ -130,6 +130,7 @@ ocsfkit workshop fixtures/wiz_finding.json \
   --mapping examples/wiz-finding-mapping.yaml
 
 ocsfkit targets search user
+ocsfkit catalog --output docs/mapping-catalog.md
 ocsfkit pack validate</code></pre>
       <h2>Workflow</h2>
       <p>Inspect source fields with workshop mode, map known fields, explicitly drop reviewed noise, run explain for provenance, gate coverage in CI, lock behavior with fixture tests, and promote mature mappings with strict mode.</p>

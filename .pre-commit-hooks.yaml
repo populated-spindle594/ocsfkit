@@ -1,0 +1,20 @@
+- id: ocsfkit-validate-mapping
+  name: ocsfkit validate mapping
+  description: Validate ocsfkit mapping YAML files.
+  entry: ocsfkit validate-mapping
+  language: python
+  files: ^examples/.*\.ya?ml$
+
+- id: ocsfkit-pack-validate
+  name: ocsfkit validate mapping packs
+  description: Validate built-in ocsfkit mapping packs.
+  entry: ocsfkit pack validate
+  language: python
+  pass_filenames: false
+
+- id: ocsfkit-lint-ocsf
+  name: ocsfkit lint OCSF events
+  description: Lint OCSF event fixtures.
+  entry: ocsfkit lint
+  language: python
+  files: ^fixtures/ocsf_.*\.json$

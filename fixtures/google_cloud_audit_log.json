@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-01-14T09:41:44Z",
+  "severity": "NOTICE",
+  "protoPayload": {
+    "methodName": "google.iam.admin.v1.CreateServiceAccountKey",
+    "authenticationInfo": {
+      "principalEmail": "analyst@example.com"
+    },
+    "resourceName": "projects/example-project/serviceAccounts/build@example-project.iam.gserviceaccount.com",
+    "status": {
+      "code": 0,
+      "message": "OK"
+    }
+  },
+  "resource": {
+    "labels": {
+      "project_id": "example-project",
+      "location": "global"
+    }
+  }
+}

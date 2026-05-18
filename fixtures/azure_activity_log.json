@@ -1,0 +1,11 @@
+{
+  "time": "2026-01-14T09:41:44Z",
+  "category": "Administrative",
+  "operationName": "Microsoft.Authorization/roleAssignments/write",
+  "resultType": "Success",
+  "caller": "analyst@example.com",
+  "resourceGroupName": "rg-security-lab",
+  "resourceId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-security-lab",
+  "tenantId": "00000000-0000-0000-0000-000000000000",
+  "location": "eastus"
+}

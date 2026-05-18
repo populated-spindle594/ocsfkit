@@ -1,0 +1,10 @@
+{
+  "UtcTime": "2026-01-14 09:41:44",
+  "EventID": 1,
+  "Computer": "workstation-01.example.test",
+  "User": "EXAMPLE\\analyst",
+  "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+  "ProcessId": 4242,
+  "CommandLine": "powershell.exe -NoProfile -ExecutionPolicy Bypass",
+  "ParentImage": "C:\\Windows\\explorer.exe"
+}

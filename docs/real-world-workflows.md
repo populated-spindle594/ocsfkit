@@ -150,6 +150,15 @@ ocsfkit explain fixtures/cloudflare_log.json \
 
 ocsfkit explain fixtures/kubernetes_audit.json \
   --mapping examples/kubernetes-audit-mapping.yaml
+
+ocsfkit explain fixtures/aws_vpc_flow_log.json \
+  --mapping examples/aws-vpc-flow-mapping.yaml
+
+ocsfkit explain fixtures/sysmon_process_event.json \
+  --mapping examples/sysmon-process-mapping.yaml
+
+ocsfkit explain fixtures/windows_security_event.json \
+  --mapping examples/windows-security-auth-mapping.yaml
 ```
 
 Diff class and severity changes before routing these events into production.
@@ -199,6 +208,17 @@ ocsfkit coverage fixtures/guardduty.ndjson \
   --max-unmapped 25
 ```
 
+Use `scorecard` when you want one readiness gate that combines mapped-event
+lint, coverage, and optional strict checks:
+
+```bash
+ocsfkit scorecard fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --strict
+```
+
 Append the same review to a GitHub Actions job summary:
 
 ```bash
@@ -227,9 +247,16 @@ For release pipelines, add strict validation:
 
 ```bash
 ocsfkit validate-mapping examples/guardduty-mapping.yaml --strict
+ocsfkit schema-drift examples/guardduty-mapping.yaml
 ocsfkit explain fixtures/aws_guardduty_finding.json \
   --mapping examples/guardduty-mapping.yaml \
   --strict
+```
+
+Regenerate mapping catalog documentation before releasing mapping pack changes:
+
+```bash
+ocsfkit catalog --output docs/mapping-catalog.md
 ```
 
 ## Compare Mapping Versions

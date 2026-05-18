@@ -149,6 +149,25 @@ def test_coverage_markdown_smoke() -> None:
     assert "ocsfkit Coverage" in result.stdout
 
 
+def test_scorecard_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "scorecard",
+            "fixtures/guardduty.ndjson",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--min-confidence",
+            "0.7",
+            "--max-unmapped",
+            "10",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    assert '"grade": "C"' in result.stdout
+
+
 def test_validate_mapping_smoke() -> None:
     result = runner.invoke(app, ["validate-mapping", "examples/guardduty-mapping.yaml"])
     assert result.exit_code == 0
@@ -170,6 +189,29 @@ def test_test_mapping_smoke() -> None:
     result = runner.invoke(app, ["test-mapping", "tests/fixtures/guardduty-test.yaml"])
     assert result.exit_code == 0
     assert "passed" in result.stdout
+
+
+def test_test_mapping_directory_smoke() -> None:
+    result = runner.invoke(app, ["test-mapping", "tests/fixtures"])
+    assert result.exit_code == 0
+    assert "guardduty-test.yaml" in result.stdout
+
+
+def test_test_transform_smoke() -> None:
+    result = runner.invoke(app, ["test-transform", "tests/fixtures/transform-test.yaml"])
+    assert result.exit_code == 0
+    assert "severity_text_to_id" in result.stdout
+
+
+def test_schema_drift_smoke() -> None:
+    result = runner.invoke(app, ["schema-drift", "examples/guardduty-mapping.yaml"])
+    assert result.exit_code == 0
+
+
+def test_catalog_smoke() -> None:
+    result = runner.invoke(app, ["catalog", "--json"])
+    assert result.exit_code == 0
+    assert "guardduty-mapping" in result.stdout
 
 
 def test_report_smoke(tmp_path) -> None:

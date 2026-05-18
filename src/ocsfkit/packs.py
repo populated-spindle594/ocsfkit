@@ -11,11 +11,15 @@ BUILTIN_PACKS = {
         "examples/guardduty-mapping.yaml",
         "examples/securityhub-mapping.yaml",
         "examples/cloudtrail-console-login-mapping.yaml",
+        "examples/aws-vpc-flow-mapping.yaml",
     ],
     "identity": [
         "examples/okta-authentication-mapping.yaml",
         "examples/azure-ad-signin-mapping.yaml",
+        "examples/azure-activity-mapping.yaml",
         "examples/github-audit-mapping.yaml",
+        "examples/google-cloud-audit-mapping.yaml",
+        "examples/windows-security-auth-mapping.yaml",
     ],
     "network": [
         "examples/paloalto-traffic-mapping.yaml",
@@ -31,7 +35,10 @@ BUILTIN_PACKS = {
         "examples/splunk-notable-mapping.yaml",
         "examples/gcp-scc-finding-mapping.yaml",
     ],
-    "infrastructure": ["examples/kubernetes-audit-mapping.yaml"],
+    "infrastructure": [
+        "examples/kubernetes-audit-mapping.yaml",
+        "examples/sysmon-process-mapping.yaml",
+    ],
 }
 
 
