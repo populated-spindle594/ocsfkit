@@ -1,0 +1,10 @@
+{
+  "time": "not-a-timestamp",
+  "class_uid": 2004,
+  "class_name": "Detection",
+  "severity_id": 99,
+  "metadata": {
+    "product": {}
+  }
+}
+

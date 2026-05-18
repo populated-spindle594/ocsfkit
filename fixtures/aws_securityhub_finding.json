@@ -1,0 +1,20 @@
+{
+  "AwsAccountId": "444455556666",
+  "CreatedAt": "2026-02-20T19:35:12Z",
+  "Description": "Security group allows unrestricted ingress to SSH.",
+  "GeneratorId": "security-control/EC2.19",
+  "Id": "arn:aws:securityhub:us-west-2:444455556666:finding/sample",
+  "ProductName": "Security Hub",
+  "Region": "us-west-2",
+  "Resources": [
+    {
+      "Id": "sg-0123456789abcdef0",
+      "Type": "AwsEc2SecurityGroup"
+    }
+  ],
+  "Severity": {
+    "Label": "MEDIUM"
+  },
+  "Title": "Security group should not allow unrestricted SSH access"
+}
+

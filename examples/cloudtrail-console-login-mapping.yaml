@@ -1,0 +1,39 @@
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+
+fields:
+  time:
+    from: $.eventTime
+    transform: parse_timestamp
+    required: true
+
+  severity_id:
+    default: 3
+    required: true
+
+  severity:
+    default: Medium
+
+  message:
+    from: $.eventName
+
+  metadata.product.name:
+    default: AWS CloudTrail
+
+  cloud.account_uid:
+    from: $.recipientAccountId
+
+  cloud.region:
+    from: $.awsRegion
+
+  actor.user.name:
+    from: $.userIdentity.userName
+
+  actor.user.uid:
+    from: $.userIdentity.principalId
+
+drop:
+  - $.requestParameters
+

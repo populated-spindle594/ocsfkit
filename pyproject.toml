@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ocsfkit"
+version = "0.1.0"
+description = "An OCSF workbench for normalizing, linting, explaining, diffing, and querying security events."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "ocsfkit contributors" }]
+keywords = ["ocsf", "security", "cli", "telemetry", "normalization"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Information Technology",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+]
+dependencies = [
+  "pydantic>=2.7,<3",
+  "PyYAML>=6.0.1,<7",
+  "rich>=13.7,<15",
+  "typer>=0.12,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "ruff>=0.6,<1",
+]
+
+[project.scripts]
+ocsfkit = "ocsfkit.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/pfrederiksen/ocsfkit"
+Repository = "https://github.com/pfrederiksen/ocsfkit"
+Issues = "https://github.com/pfrederiksen/ocsfkit/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ocsfkit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+

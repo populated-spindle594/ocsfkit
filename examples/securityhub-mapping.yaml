@@ -1,0 +1,40 @@
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+
+fields:
+  time:
+    from: $.CreatedAt
+    transform: parse_timestamp
+    required: true
+
+  severity_id:
+    from: $.Severity.Label
+    transform: severity_text_to_id
+    default: 1
+    required: true
+
+  severity:
+    from: $.Severity.Label
+
+  message:
+    from: $.Title
+
+  metadata.product.name:
+    from: $.ProductName
+
+  cloud.account_uid:
+    from: $.AwsAccountId
+
+  cloud.region:
+    from: $.Region
+
+  resources[].name:
+    from: $.Resources[].Id
+
+  resources[].type:
+    from: $.Resources[].Type
+
+drop: []
+

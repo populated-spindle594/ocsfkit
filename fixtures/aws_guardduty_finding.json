@@ -1,0 +1,32 @@
+{
+  "accountId": "111122223333",
+  "eventTime": "2026-01-14T10:21:44Z",
+  "id": "sample-guardduty-finding-id",
+  "region": "us-east-1",
+  "severity": "High",
+  "title": "EC2 instance i-0123456789abcdef0 communicating with suspicious host",
+  "type": "UnauthorizedAccess:EC2/MaliciousIPCaller.Custom",
+  "resource": {
+    "instanceDetails": {
+      "instanceId": "i-0123456789abcdef0",
+      "instanceType": "t3.micro"
+    }
+  },
+  "service": {
+    "action": {
+      "awsApiCallAction": {
+        "remoteIpDetails": {
+          "ipAddressV4": "203.0.113.24",
+          "organization": {
+            "asnOrg": "Example ISP"
+          }
+        }
+      }
+    }
+  },
+  "debug": {
+    "parser": "sample"
+  },
+  "rawPayload": "redacted"
+}
+

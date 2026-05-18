@@ -1,0 +1,45 @@
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+
+fields:
+  time:
+    from: $.eventTime
+    transform: parse_timestamp
+    required: true
+
+  severity_id:
+    from: $.severity
+    transform: severity_text_to_id
+    default: 1
+    required: true
+
+  severity:
+    from: $.severity
+
+  message:
+    from: $.title
+
+  metadata.product.name:
+    default: Amazon GuardDuty
+
+  cloud.account_uid:
+    from: $.accountId
+
+  cloud.region:
+    from: $.region
+
+  actor.user.name:
+    from: $.service.action.awsApiCallAction.remoteIpDetails.organization.asnOrg
+
+  resources[].name:
+    from: $.resource.instanceDetails.instanceId
+
+  resources[].type:
+    default: EC2 Instance
+
+drop:
+  - $.debug
+  - $.rawPayload
+
