@@ -7,6 +7,20 @@ from ocsfkit.models import LintIssue
 from ocsfkit.paths import get_dotted
 from ocsfkit.transforms import SEVERITY_ID_TO_TEXT
 
+STATUS_ID_TO_TEXT = {
+    0: "Unknown",
+    1: "Success",
+    2: "Failure",
+    3: "Other",
+}
+
+CLASS_ACTIVITY_IDS = {
+    3002: {1: "Logon", 2: "Logoff", 3: "Authentication Ticket"},
+    4001: {1: "Open", 2: "Close", 3: "Reset", 6: "Traffic"},
+    1007: {1: "Launch", 2: "Terminate", 3: "Open"},
+    2004: {},
+}
+
 
 @dataclass(frozen=True)
 class FieldSpec:
@@ -197,6 +211,31 @@ def lint_event(event: dict[str, Any], schema_version: str | None = None) -> list
     severity_id = event.get("severity_id")
     if isinstance(severity_id, int) and severity_id not in SEVERITY_ID_TO_TEXT:
         issues.append(LintIssue(level="error", path="severity_id", message="Invalid severity_id"))
+    status_id = event.get("status_id")
+    if isinstance(status_id, int) and status_id not in STATUS_ID_TO_TEXT:
+        issues.append(LintIssue(level="error", path="status_id", message="Invalid status_id"))
+    activity_id = event.get("activity_id")
+    if isinstance(class_uid, int) and isinstance(activity_id, int):
+        activity_ids = CLASS_ACTIVITY_IDS.get(class_uid, {})
+        if activity_ids and activity_id not in activity_ids:
+            issues.append(
+                LintIssue(
+                    level="error",
+                    path="activity_id",
+                    message=f"Invalid activity_id for class_uid {class_uid}",
+                )
+            )
+        elif activity_id in activity_ids and event.get("activity_name") not in {
+            None,
+            activity_ids[activity_id],
+        }:
+            issues.append(
+                LintIssue(
+                    level="error",
+                    path="activity_name",
+                    message=f"Expected {activity_ids[activity_id]!r} for activity_id {activity_id}",
+                )
+            )
     if "time" in event and isinstance(event["time"], int) and event["time"] <= 0:
         issues.append(
             LintIssue(level="error", path="time", message="Timestamp must be positive epoch ms")

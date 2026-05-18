@@ -23,3 +23,29 @@ jobs:
       - name: Test
         run: pytest
 
+  install-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel
+      - name: Install wheel
+        run: |
+          python -m venv /tmp/ocsfkit-wheel
+          /tmp/ocsfkit-wheel/bin/python -m pip install dist/*.whl
+          /tmp/ocsfkit-wheel/bin/ocsfkit --help
+          /tmp/ocsfkit-wheel/bin/ocsfkit schema
+
+  install-homebrew:
+    runs-on: macos-latest
+    steps:
+      - name: Install from tap
+        run: |
+          brew tap pfrederiksen/tap
+          brew install ocsfkit
+          ocsfkit --help

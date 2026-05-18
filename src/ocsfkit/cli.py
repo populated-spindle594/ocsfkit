@@ -5,17 +5,19 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import yaml
 
 from ocsfkit.ci import (
     explanations_to_github_annotations,
     lint_issues_to_github_annotations,
     lint_issues_to_sarif,
 )
+from ocsfkit.coverage import mapping_coverage
 from ocsfkit.diff import diff_events
 from ocsfkit.errors import OCSFKitError, QueryError
 from ocsfkit.io import load_events, load_mapping_file
 from ocsfkit.mapping import apply_mapping
-from ocsfkit.paths import query_field
+from ocsfkit.paths import flatten_paths, query_field
 from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
 from ocsfkit.render import (
     console,
@@ -25,6 +27,8 @@ from ocsfkit.render import (
     render_explanation,
     render_lint,
 )
+from ocsfkit.schema import bundled_schema
+from ocsfkit.validation import validate_mapping_doc
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -205,6 +209,99 @@ def query(
     _run(command)
 
 
+@app.command("coverage")
+def coverage_command(
+    input: Annotated[
+        str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or - for stdin")
+    ],
+    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Report mapping coverage across an event stream."""
+
+    def command() -> None:
+        mapping_doc = load_mapping_file(mapping)
+        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+        report = mapping_coverage(load_events(input), mapping_doc, custom_transforms)
+        if json_output:
+            print_json(report.model_dump())
+            return
+        console.print(f"[bold]Events:[/bold] {report.events}")
+        console.print(f"[bold]Average confidence:[/bold] {report.average_confidence:.3f}")
+        console.print(f"[bold]Source field coverage:[/bold] {report.source_field_coverage:.3f}")
+        if report.unmapped_source_fields:
+            console.print("[bold]Top unmapped source fields:[/bold]")
+            for path, count in sorted(
+                report.unmapped_source_fields.items(), key=lambda item: item[1], reverse=True
+            )[:20]:
+                console.print(f"  {path}: {count}")
+
+    _run(command)
+
+
+@app.command("validate-mapping")
+def validate_mapping(
+    mapping: Annotated[str, typer.Argument(help="Mapping YAML path")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    warn_only: Annotated[
+        bool, typer.Option("--warn-only", help="Exit zero even when errors exist")
+    ] = False,
+) -> None:
+    """Validate a mapping file before applying it to events."""
+
+    def command() -> None:
+        issues = validate_mapping_doc(load_mapping_file(mapping))
+        if json_output:
+            print_json([issue.model_dump() for issue in issues])
+        else:
+            render_lint([issues])
+        if any(issue.level == "error" for issue in issues) and not warn_only:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("init-mapping")
+def init_mapping(
+    input: Annotated[str, typer.Argument(help="Sample source event file")],
+    class_uid: Annotated[int, typer.Option("--class-uid", help="Target OCSF class UID")] = 2004,
+    class_name: Annotated[
+        str, typer.Option("--class-name", help="Target OCSF class name")
+    ] = "Detection Finding",
+    product_name: Annotated[
+        str, typer.Option("--product-name", help="metadata.product.name default")
+    ] = "Unknown Product",
+) -> None:
+    """Scaffold a starter mapping from a sample source event."""
+
+    def command() -> None:
+        event = load_events(input)[0]
+        source_paths = sorted(path for path in flatten_paths(event) if "[]" not in path)
+        mapping = {
+            "schema_version": DEFAULT_SCHEMA_VERSION,
+            "target_class": {
+                "class_uid": class_uid,
+                "class_name": class_name,
+                "metadata.product.name": product_name,
+            },
+            "fields": _starter_fields(source_paths, product_name),
+            "drop": [],
+        }
+        console.print(yaml.safe_dump(mapping, sort_keys=False))
+
+    _run(command)
+
+
+@app.command("schema")
+def schema_command(
+    version: Annotated[
+        str, typer.Option("--schema-version", help="Bundled schema version")
+    ] = DEFAULT_SCHEMA_VERSION,
+) -> None:
+    """Emit the bundled minimal OCSF schema registry as JSON."""
+    _run(lambda: print_json(bundled_schema(version)))
+
+
 def _validate_format(format_name: str) -> None:
     if format_name not in {"json", "ndjson"}:
         raise OCSFKitError("--format must be one of: json, ndjson")
@@ -220,6 +317,48 @@ def _custom_transforms_for_mapping(mapping_doc: dict, mapping_path: str) -> dict
         raise OCSFKitError("custom_transforms must be a list of Python file paths")
     base_dir = Path(mapping_path).resolve().parent
     return load_custom_transforms(paths, base_dir)
+
+
+def _starter_fields(source_paths: list[str], product_name: str) -> dict[str, dict[str, str | bool]]:
+    candidates = {
+        "time": ("time", "eventTime", "timestamp", "created_at", "createdAt", "published"),
+        "message": ("message", "title", "description", "eventName", "name"),
+        "severity": ("severity", "Severity.Label", "risk", "risk_label"),
+        "cloud.account_uid": ("accountId", "AwsAccountId", "tenantId"),
+        "cloud.region": ("region", "awsRegion", "Region"),
+        "actor.user.name": ("user", "userName", "actor.name", "target.user"),
+        "src_endpoint.ip": ("src_ip", "sourceIPAddress", "source.ip", "client.ip"),
+        "dst_endpoint.ip": ("dst_ip", "destination.ip", "server.ip"),
+    }
+    fields: dict[str, dict[str, str | bool]] = {
+        "metadata.product.name": {"default": product_name}
+    }
+    for target, names in candidates.items():
+        match = _find_source_path(source_paths, names)
+        if match:
+            spec: dict[str, str | bool] = {"from": match}
+            if target == "time":
+                spec["transform"] = "parse_timestamp"
+                spec["required"] = True
+            fields[target] = spec
+    if "severity" in fields:
+        fields["severity_id"] = {
+            "from": fields["severity"]["from"],
+            "transform": "severity_text_to_id",
+            "default": 1,
+            "required": True,
+        }
+    return fields
+
+
+def _find_source_path(source_paths: list[str], names: tuple[str, ...]) -> str | None:
+    lowered = {path.lower(): path for path in source_paths}
+    for name in names:
+        suffix = f".{name}".lower()
+        for lowered_path, path in lowered.items():
+            if lowered_path.endswith(suffix) or lowered_path == f"${suffix}":
+                return path
+    return None
 
 
 def _run(callback: Callable[[], None]) -> None:

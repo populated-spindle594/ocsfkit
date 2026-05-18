@@ -1,0 +1,51 @@
+schema_version: 1.7.0
+
+custom_transforms:
+  - custom_transforms.py
+
+target_class:
+  class_uid: 3002
+  class_name: Authentication
+  category_uid: 3
+  category_name: Identity & Access Management
+
+fields:
+  time:
+    from: $.createdDateTime
+    transform: parse_timestamp
+    required: true
+
+  activity_id:
+    default: 1
+
+  activity_name:
+    default: Logon
+
+  message:
+    from: $.appDisplayName
+
+  metadata.product.name:
+    default: Microsoft Entra ID
+
+  actor.user.name:
+    from: $.userPrincipalName
+
+  actor.user.uid:
+    from: $.userId
+
+  cloud.account_uid:
+    from: $.tenantId
+
+  src_endpoint.ip:
+    from: $.ipAddress
+
+  status:
+    from: $.status.errorCode
+    transform: azure_status_text
+
+  status_id:
+    from: $.status.errorCode
+    transform: azure_status_id
+
+drop: []
+

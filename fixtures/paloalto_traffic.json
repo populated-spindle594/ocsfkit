@@ -1,0 +1,12 @@
+{
+  "Receive Time": "2026-04-06T12:30:00Z",
+  "Type": "TRAFFIC",
+  "Subtype": "end",
+  "Source address": "10.0.0.10",
+  "Destination address": "198.51.100.200",
+  "Source Port": 51515,
+  "Destination Port": 443,
+  "Action": "allow",
+  "Device Name": "pa-fw-01"
+}
+

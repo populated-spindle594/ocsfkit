@@ -1,0 +1,13 @@
+{
+  "createdDateTime": "2026-04-03T15:22:04Z",
+  "userPrincipalName": "bob@example.com",
+  "userId": "00000000-0000-4000-8000-000000000001",
+  "appDisplayName": "Azure Portal",
+  "ipAddress": "203.0.113.44",
+  "status": {
+    "errorCode": 0,
+    "failureReason": "Other."
+  },
+  "tenantId": "00000000-0000-4000-8000-000000000002"
+}
+

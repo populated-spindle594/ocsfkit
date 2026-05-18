@@ -1,0 +1,13 @@
+{
+  "created_timestamp": "2026-04-05T18:00:10Z",
+  "detect_id": "ldt:example",
+  "name": "Suspicious PowerShell command",
+  "severity": "high",
+  "device": {
+    "hostname": "win-workstation-01"
+  },
+  "user_name": "charlie",
+  "process_name": "powershell.exe",
+  "process_id": 4242
+}
+

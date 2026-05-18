@@ -1,0 +1,42 @@
+schema_version: 1.7.0
+
+target_class:
+  class_uid: 4001
+  class_name: Network Activity
+  category_uid: 4
+  category_name: Network Activity
+
+fields:
+  time:
+    from: $.ts
+    transform: epoch_seconds_to_ms
+    required: true
+
+  activity_id:
+    default: 6
+
+  activity_name:
+    default: Traffic
+
+  message:
+    from: $.service
+
+  metadata.product.name:
+    default: Zeek
+
+  src_endpoint.ip:
+    from: $.id.orig_h
+
+  src_endpoint.port:
+    from: $.id.orig_p
+
+  dst_endpoint.ip:
+    from: $.id.resp_h
+
+  dst_endpoint.port:
+    from: $.id.resp_p
+
+drop:
+  - $.uid
+  - $.duration
+

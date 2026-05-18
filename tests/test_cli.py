@@ -71,3 +71,35 @@ def test_query_smoke() -> None:
     result = runner.invoke(app, ["query", "fixtures/ocsf_detection_finding.json", "severity_id"])
     assert result.exit_code == 0
     assert "4" in result.stdout
+
+
+def test_coverage_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "coverage",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "source_field_coverage" in result.stdout
+
+
+def test_validate_mapping_smoke() -> None:
+    result = runner.invoke(app, ["validate-mapping", "examples/guardduty-mapping.yaml"])
+    assert result.exit_code == 0
+
+
+def test_init_mapping_smoke() -> None:
+    result = runner.invoke(app, ["init-mapping", "fixtures/aws_guardduty_finding.json"])
+    assert result.exit_code == 0
+    assert "schema_version" in result.stdout
+
+
+def test_schema_smoke() -> None:
+    result = runner.invoke(app, ["schema"])
+    assert result.exit_code == 0
+    assert "Detection Finding" in result.stdout

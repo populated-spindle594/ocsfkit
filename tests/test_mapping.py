@@ -1,5 +1,6 @@
 from ocsfkit.io import load_events, load_mapping_file
 from ocsfkit.mapping import apply_mapping
+from ocsfkit.transforms import load_custom_transforms
 
 
 def test_mapping_application() -> None:
@@ -26,8 +27,6 @@ def test_cloudtrail_mapping_application() -> None:
     mapping = load_mapping_file("examples/cloudtrail-console-login-mapping.yaml")
     from pathlib import Path
 
-    from ocsfkit.transforms import load_custom_transforms
-
     custom_transforms = load_custom_transforms(
         mapping["custom_transforms"],
         Path("examples"),
@@ -38,6 +37,34 @@ def test_cloudtrail_mapping_application() -> None:
     assert result.event["actor"]["user"]["name"] == "alice"
     assert result.event["status"] == "Failure"
     assert result.event["status_id"] == 2
+
+
+def test_vendor_mapping_examples() -> None:
+    from pathlib import Path
+
+    cases = [
+        ("fixtures/okta_login_event.json", "examples/okta-authentication-mapping.yaml", 3002),
+        ("fixtures/azure_ad_signin.json", "examples/azure-ad-signin-mapping.yaml", 3002),
+        ("fixtures/github_audit_event.json", "examples/github-audit-mapping.yaml", 1007),
+        (
+            "fixtures/crowdstrike_detection.json",
+            "examples/crowdstrike-detection-mapping.yaml",
+            2004,
+        ),
+        ("fixtures/paloalto_traffic.json", "examples/paloalto-traffic-mapping.yaml", 4001),
+        ("fixtures/zeek_conn.json", "examples/zeek-conn-mapping.yaml", 4001),
+    ]
+    for fixture, mapping_path, class_uid in cases:
+        source = load_events(fixture)[0]
+        mapping = load_mapping_file(mapping_path)
+        custom_transforms = load_custom_transforms(
+            mapping.get("custom_transforms") or [],
+            Path(mapping_path).parent,
+        )
+        result = apply_mapping(source, mapping, custom_transforms)
+        assert result.event["class_uid"] == class_uid
+        assert result.event["metadata"]["version"] == "1.7.0"
+        assert result.explanation.missing_target_fields == []
 
 
 def test_explain_contains_mapping_quality_categories() -> None:

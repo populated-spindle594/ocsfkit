@@ -40,3 +40,15 @@ def test_lint_catches_schema_version_mismatch() -> None:
     event = load_events("fixtures/ocsf_detection_finding.json")[0]
     issues = lint_event(event, schema_version="1.6.0")
     assert any(issue.path == "metadata.version" and issue.level == "error" for issue in issues)
+
+
+def test_lint_catches_invalid_activity_enum() -> None:
+    event = {
+        "time": 1,
+        "class_uid": 3002,
+        "class_name": "Authentication",
+        "metadata": {"version": "1.7.0"},
+        "activity_id": 99,
+    }
+    issues = lint_event(event)
+    assert any(issue.path == "activity_id" and issue.level == "error" for issue in issues)

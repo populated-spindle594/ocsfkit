@@ -1,0 +1,46 @@
+schema_version: 1.7.0
+
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+  category_uid: 2
+  category_name: Findings
+
+fields:
+  time:
+    from: $.created_timestamp
+    transform: parse_timestamp
+    required: true
+
+  severity:
+    from: $.severity
+    transform:
+      - lower
+      - title_case
+
+  severity_id:
+    from: $.severity
+    transform: severity_text_to_id
+    required: true
+
+  message:
+    from: $.name
+
+  metadata.product.name:
+    default: CrowdStrike Falcon
+
+  actor.user.name:
+    from: $.user_name
+
+  device.hostname:
+    from: $.device.hostname
+
+  process.name:
+    from: $.process_name
+
+  process.pid:
+    from: $.process_id
+
+drop:
+  - $.detect_id
+

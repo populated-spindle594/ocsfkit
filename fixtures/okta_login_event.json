@@ -1,0 +1,22 @@
+{
+  "published": "2026-04-02T13:12:01Z",
+  "eventType": "user.session.start",
+  "displayMessage": "User login to Okta",
+  "outcome": {
+    "result": "SUCCESS"
+  },
+  "actor": {
+    "id": "00u-example",
+    "alternateId": "alice@example.com",
+    "displayName": "Alice Example"
+  },
+  "client": {
+    "ipAddress": "198.51.100.10"
+  },
+  "debugContext": {
+    "debugData": {
+      "requestId": "req-example"
+    }
+  }
+}
+

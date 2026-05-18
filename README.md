@@ -39,6 +39,7 @@ pip install -e ".[dev]"
 - [Getting Started](docs/getting-started.md): first mapping, lint, query, and diff workflow.
 - [Mapping Guide](docs/mapping-guide.md): YAML format, provenance, transforms, drops, and required fields.
 - [Real-World Workflows](docs/real-world-workflows.md): GuardDuty, Security Hub, CloudTrail, CI gates, and mapping comparisons.
+- [Docs Site](docs/site/index.html): static site source for GitHub Pages.
 
 ## Quick Start
 
@@ -86,6 +87,9 @@ Query common OCSF fields:
 ocsfkit query fixtures/ocsf_detection_finding.json severity_id
 ocsfkit query fixtures/ocsf_detection_finding.json metadata.product.name
 ocsfkit query fixtures/ocsf_detection_finding.json cloud.account_uid
+ocsfkit coverage fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml
+ocsfkit validate-mapping examples/guardduty-mapping.yaml
+ocsfkit init-mapping fixtures/aws_guardduty_finding.json
 ```
 
 ## Command Reference
@@ -207,6 +211,7 @@ Included examples:
 - [Security Hub mapping](examples/securityhub-mapping.yaml)
 - [CloudTrail console login mapping](examples/cloudtrail-console-login-mapping.yaml)
 - [Custom transform module](examples/custom_transforms.py)
+- Okta, Microsoft Entra ID, GitHub Audit Log, CrowdStrike, Palo Alto, and Zeek mappings.
 
 ## Minimal OCSF Scope
 
@@ -280,7 +285,7 @@ The CLI entry point is `ocsfkit = "ocsfkit.cli:app"`.
 This repository is ready for normal Python packaging with `pyproject.toml`.
 Recommended release flow:
 
-1. Tag a version: `git tag v0.2.1 && git push --tags`
+1. Tag a version: `git tag v0.3.0 && git push --tags`
 2. The `.github/workflows/release.yml` workflow builds distributions.
 3. PyPI publishing uses trusted publishing through `pypa/gh-action-pypi-publish`
    when `PYPI_PUBLISH_ENABLED=true` is configured as a repository variable.
