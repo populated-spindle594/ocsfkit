@@ -127,9 +127,12 @@ ocsfkit report fixtures/guardduty.ndjson \
   --output report.html
 
 ocsfkit workshop fixtures/wiz_finding.json \
-  --mapping examples/wiz-finding-mapping.yaml</code></pre>
+  --mapping examples/wiz-finding-mapping.yaml
+
+ocsfkit targets search user
+ocsfkit pack validate</code></pre>
       <h2>Workflow</h2>
-      <p>Inspect source fields with workshop mode, map known fields, explicitly drop reviewed noise, run explain for provenance, gate coverage in CI, and lock behavior with fixture tests.</p>
+      <p>Inspect source fields with workshop mode, map known fields, explicitly drop reviewed noise, run explain for provenance, gate coverage in CI, lock behavior with fixture tests, and promote mature mappings with strict mode.</p>
       <h2>Project Links</h2>
       <p>
         <a href="https://github.com/pfrederiksen/ocsfkit">GitHub repository</a> ·

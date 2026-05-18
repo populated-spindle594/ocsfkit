@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -18,7 +19,7 @@ class CoverageReport(BaseModel):
 
 
 def mapping_coverage(
-    events: list[dict[str, Any]],
+    events: Iterable[dict[str, Any]],
     mapping: dict[str, Any],
     custom_transforms: dict[str, Any] | None = None,
 ) -> CoverageReport:
@@ -27,7 +28,9 @@ def mapping_coverage(
     dropped_source_fields: dict[str, int] = {}
     missing_target_fields: dict[str, int] = {}
     confidence_total = 0.0
+    event_count = 0
     for event in events:
+        event_count += 1
         result = apply_mapping(event, mapping, custom_transforms)
         explanation = result.explanation
         confidence_total += explanation.confidence
@@ -48,12 +51,12 @@ def mapping_coverage(
     unmapped = sum(unmapped_source_fields.values())
     denominator = reviewed + unmapped
     return CoverageReport(
-        events=len(events),
+        events=event_count,
         mapped_targets=dict(sorted(mapped_targets.items())),
         unmapped_source_fields=dict(sorted(unmapped_source_fields.items())),
         dropped_source_fields=dict(sorted(dropped_source_fields.items())),
         missing_target_fields=dict(sorted(missing_target_fields.items())),
-        average_confidence=round(confidence_total / len(events), 3) if events else 0.0,
+        average_confidence=round(confidence_total / event_count, 3) if event_count else 0.0,
         source_field_coverage=round(reviewed / denominator, 3) if denominator else 1.0,
     )
 

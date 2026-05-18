@@ -15,9 +15,10 @@ from ocsfkit.ci import (
 from ocsfkit.coverage import enforce_coverage_thresholds, mapping_coverage
 from ocsfkit.diff import diff_events
 from ocsfkit.errors import OCSFKitError, QueryError
-from ocsfkit.io import load_events, load_mapping_file
+from ocsfkit.io import iter_events, load_events, load_mapping_file
 from ocsfkit.mapping import apply_mapping
 from ocsfkit.mapping_test import run_mapping_test
+from ocsfkit.packs import list_packs, validate_pack
 from ocsfkit.paths import flatten_paths, query_field
 from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
 from ocsfkit.render import (
@@ -28,9 +29,13 @@ from ocsfkit.render import (
     render_explanation,
     render_lint,
 )
-from ocsfkit.report import coverage_html
+from ocsfkit.report import coverage_html, explanation_html
 from ocsfkit.schema import bundled_schema
 from ocsfkit.schema_import import import_schema
+from ocsfkit.schema_sync import sync_schema
+from ocsfkit.strict import strict_mapping_failures
+from ocsfkit.summary import coverage_markdown, explanation_markdown
+from ocsfkit.targets import list_targets, search_targets, show_target
 from ocsfkit.validation import validate_mapping_doc
 
 app = typer.Typer(
@@ -40,6 +45,10 @@ app = typer.Typer(
         "and querying security events."
     ),
 )
+targets_app = typer.Typer(help="Search and inspect bundled OCSF target fields.")
+packs_app = typer.Typer(help="List and validate built-in mapping packs.")
+app.add_typer(targets_app, name="targets")
+app.add_typer(packs_app, name="pack")
 
 
 OutputFormat = Annotated[str, typer.Option("--format", help="Output format: json or ndjson")]
@@ -100,6 +109,16 @@ def map(  # noqa: A001
     explain: Annotated[
         bool, typer.Option("--explain", help="Include explanation metadata")
     ] = False,
+    strict: Annotated[
+        bool, typer.Option("--strict", help="Fail on guessed, missing, or unmapped fields")
+    ] = False,
+    allow_unsafe_transforms: Annotated[
+        bool,
+        typer.Option(
+            "--allow-unsafe-transforms",
+            help="Allow Python custom_transforms files when strict mode is enabled",
+        ),
+    ] = False,
     format: OutputFormat = "json",  # noqa: A002
 ) -> None:
     """Apply a YAML mapping and emit OCSF JSON."""
@@ -107,10 +126,14 @@ def map(  # noqa: A001
     def command() -> None:
         _validate_format(format)
         mapping_doc = load_mapping_file(mapping)
-        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping, allow_unsafe_transforms or not strict
+        )
         results = [
-            apply_mapping(event, mapping_doc, custom_transforms) for event in load_events(input)
+            apply_mapping(event, mapping_doc, custom_transforms) for event in iter_events(input)
         ]
+        if strict:
+            _raise_on_strict_failures([result.explanation for result in results])
         if explain:
             payload = [
                 {"event": result.event, "explanation": result.explanation.model_dump()}
@@ -133,15 +156,32 @@ def explain(
     github_annotations: Annotated[
         bool, typer.Option("--github-annotations", help="Emit GitHub workflow annotations")
     ] = False,
+    markdown: Annotated[bool, typer.Option("--markdown", help="Emit Markdown explanation")] = False,
+    html_output: Annotated[bool, typer.Option("--html", help="Emit HTML explanation")] = False,
+    output: Annotated[
+        str | None,
+        typer.Option("--output", "-o", help="Write report to a file"),
+    ] = None,
+    strict: Annotated[
+        bool, typer.Option("--strict", help="Fail on guessed, missing, or unmapped fields")
+    ] = False,
+    allow_unsafe_transforms: Annotated[
+        bool,
+        typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files"),
+    ] = False,
 ) -> None:
     """Explain mapping decisions, data loss, missing targets, and confidence."""
 
     def command() -> None:
         mapping_doc = load_mapping_file(mapping)
-        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping, allow_unsafe_transforms or not strict
+        )
         results = [
-            apply_mapping(event, mapping_doc, custom_transforms) for event in load_events(input)
+            apply_mapping(event, mapping_doc, custom_transforms) for event in iter_events(input)
         ]
+        if strict:
+            _raise_on_strict_failures([result.explanation for result in results])
         if github_annotations:
             explanations = [result.explanation for result in results]
             for annotation in explanations_to_github_annotations(explanations, input):
@@ -149,6 +189,15 @@ def explain(
             return
         if json_output:
             print_json([result.explanation.model_dump() for result in results])
+            return
+        if markdown:
+            text = "\n".join(explanation_markdown(result.explanation) for result in results)
+            _write_or_print(text, output)
+            return
+        if html_output:
+            if len(results) != 1:
+                raise OCSFKitError("--html currently requires exactly one input event")
+            _write_or_print(explanation_html(results[0].explanation), output)
             return
         for index, result in enumerate(results, start=1):
             if len(results) > 1:
@@ -225,14 +274,49 @@ def coverage_command(
     max_unmapped: Annotated[
         int | None, typer.Option("--max-unmapped", help="Fail above this unmapped field count")
     ] = None,
+    markdown: Annotated[
+        bool, typer.Option("--markdown", help="Emit a Markdown coverage summary")
+    ] = False,
+    github_summary: Annotated[
+        bool,
+        typer.Option("--github-summary", help="Append a Markdown summary to GITHUB_STEP_SUMMARY"),
+    ] = False,
+    strict: Annotated[
+        bool, typer.Option("--strict", help="Fail on guessed, missing, or unmapped fields")
+    ] = False,
+    allow_unsafe_transforms: Annotated[
+        bool,
+        typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files"),
+    ] = False,
 ) -> None:
     """Report mapping coverage across an event stream."""
 
     def command() -> None:
         mapping_doc = load_mapping_file(mapping)
-        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
-        report = mapping_coverage(load_events(input), mapping_doc, custom_transforms)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping, allow_unsafe_transforms or not strict
+        )
+        events = list(iter_events(input))
+        report = mapping_coverage(events, mapping_doc, custom_transforms)
         failures = enforce_coverage_thresholds(report, min_confidence, max_unmapped)
+        if strict:
+            strict_failures: list[str] = []
+            for event in events:
+                strict_failures.extend(
+                    strict_mapping_failures(
+                        apply_mapping(event, mapping_doc, custom_transforms).explanation
+                    )
+                )
+            failures.extend(strict_failures)
+        if markdown or github_summary:
+            text = coverage_markdown(report, failures)
+            if github_summary:
+                _append_github_summary(text)
+            if markdown:
+                console.print(text)
+            if failures:
+                raise typer.Exit(1)
+            return
         if json_output:
             payload = report.model_dump()
             payload["threshold_failures"] = failures
@@ -264,6 +348,9 @@ def validate_mapping(
     warn_only: Annotated[
         bool, typer.Option("--warn-only", help="Exit zero even when errors exist")
     ] = False,
+    strict: Annotated[
+        bool, typer.Option("--strict", help="Treat warnings as errors")
+    ] = False,
 ) -> None:
     """Validate a mapping file before applying it to events."""
 
@@ -273,7 +360,8 @@ def validate_mapping(
             print_json([issue.model_dump() for issue in issues])
         else:
             render_lint([issues])
-        if any(issue.level == "error" for issue in issues) and not warn_only:
+        has_failure = any(issue.level == "error" or strict for issue in issues)
+        if has_failure and not warn_only:
             raise typer.Exit(1)
 
     _run(command)
@@ -326,6 +414,23 @@ def import_schema_command(
 ) -> None:
     """Import an upstream-style OCSF schema export into ocsfkit JSON."""
     _run(lambda: print_json(import_schema(path)))
+
+
+@app.command("sync-schema")
+def sync_schema_command(
+    output: Annotated[str, typer.Option("--output", "-o", help="Output registry JSON path")],
+    url: Annotated[
+        str,
+        typer.Option("--url", help="OCSF schema zip archive URL"),
+    ] = "https://github.com/ocsf/ocsf-schema/archive/refs/heads/main.zip",
+) -> None:
+    """Download and import the upstream OCSF schema archive."""
+
+    def command() -> None:
+        imported = sync_schema(output, url)
+        console.print(f"Wrote {output} ({len(imported.get('classes', {}))} classes)")
+
+    _run(command)
 
 
 @app.command("test-mapping")
@@ -393,21 +498,148 @@ def workshop_command(
     _run(command)
 
 
+@targets_app.command("list")
+def targets_list(
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """List bundled OCSF target fields."""
+    _run(lambda: print_json(list_targets()) if json_output else _print_targets(list_targets()))
+
+
+@targets_app.command("search")
+def targets_search(
+    term: Annotated[str, typer.Argument(help="Search term")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Search bundled OCSF target fields."""
+
+    def command() -> None:
+        targets = search_targets(term)
+        print_json(targets) if json_output else _print_targets(targets)
+
+    _run(command)
+
+
+@targets_app.command("show")
+def targets_show(
+    path: Annotated[str, typer.Argument(help="Target field path")],
+) -> None:
+    """Show details for a bundled OCSF target field."""
+
+    def command() -> None:
+        target = show_target(path)
+        if target is None:
+            raise OCSFKitError(f"Unknown target field: {path}")
+        print_json(target)
+
+    _run(command)
+
+
+@packs_app.command("list")
+def pack_list(
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """List built-in mapping packs."""
+
+    def command() -> None:
+        packs = list_packs()
+        if json_output:
+            print_json(packs)
+            return
+        for pack in packs:
+            console.print(f"[bold]{pack['name']}[/bold] ({pack['mapping_count']} mappings)")
+            for mapping in pack["mappings"]:
+                console.print(f"  {mapping}")
+
+    _run(command)
+
+
+@packs_app.command("validate")
+def pack_validate(
+    root: Annotated[str, typer.Option("--root", help="Repository root containing examples/")] = ".",
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Validate all built-in mapping packs."""
+
+    def command() -> None:
+        results = validate_pack(root)
+        if json_output:
+            print_json(results)
+        else:
+            for result in results:
+                issue_count = len(result["issues"])
+                color = "green" if issue_count == 0 else "yellow"
+                console.print(
+                    f"[{color}]{result['pack']}[/] {result['mapping']}: {issue_count} issues"
+                )
+        if any(issue["level"] == "error" for result in results for issue in result["issues"]):
+            raise typer.Exit(1)
+
+    _run(command)
+
+
 def _validate_format(format_name: str) -> None:
     if format_name not in {"json", "ndjson"}:
         raise OCSFKitError("--format must be one of: json, ndjson")
 
 
-def _custom_transforms_for_mapping(mapping_doc: dict, mapping_path: str) -> dict[str, Callable]:
+def _custom_transforms_for_mapping(
+    mapping_doc: dict,
+    mapping_path: str,
+    allow_unsafe: bool = True,
+) -> dict[str, Callable]:
     from ocsfkit.transforms import load_custom_transforms
 
     paths = mapping_doc.get("custom_transforms") or []
     if not paths:
         return {}
+    if not allow_unsafe:
+        raise OCSFKitError(
+            "custom_transforms execute Python code; rerun with --allow-unsafe-transforms"
+        )
     if not isinstance(paths, list) or not all(isinstance(item, str) for item in paths):
         raise OCSFKitError("custom_transforms must be a list of Python file paths")
     base_dir = Path(mapping_path).resolve().parent
     return load_custom_transforms(paths, base_dir)
+
+
+def _raise_on_strict_failures(explanations: list) -> None:
+    failures: list[str] = []
+    for index, explanation in enumerate(explanations, start=1):
+        failures.extend(
+            f"event {index}: {failure}" for failure in strict_mapping_failures(explanation)
+        )
+    if failures:
+        raise OCSFKitError("Strict mode failed:\n" + "\n".join(failures))
+
+
+def _write_or_print(text: str, output: str | None) -> None:
+    if output:
+        Path(output).write_text(text)
+        console.print(f"Wrote {output}")
+    else:
+        console.print(text)
+
+
+def _append_github_summary(text: str) -> None:
+    import os
+
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary_path:
+        raise OCSFKitError("GITHUB_STEP_SUMMARY is not set")
+    with Path(summary_path).open("a") as handle:
+        handle.write(text)
+
+
+def _print_targets(targets: list[dict]) -> None:
+    for target in targets:
+        markers = []
+        if target["required"]:
+            markers.append("required")
+        if target["recommended"]:
+            markers.append("recommended")
+        suffix = f" ({', '.join(markers)})" if markers else ""
+        console.print(f"{target['path']} [{target['type']}]{suffix}")
 
 
 def _starter_fields(source_paths: list[str], product_name: str) -> dict[str, dict[str, str | bool]]:

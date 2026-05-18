@@ -67,6 +67,52 @@ def test_explain_github_annotations_smoke() -> None:
     assert "::warning file=fixtures/aws_guardduty_finding.json,line=1::" in result.stdout
 
 
+def test_explain_markdown_and_html_smoke(tmp_path) -> None:
+    markdown = runner.invoke(
+        app,
+        [
+            "explain",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--markdown",
+        ],
+    )
+    assert markdown.exit_code == 0
+    assert "Mapping Explanation" in markdown.stdout
+
+    output = tmp_path / "explain.html"
+    html = runner.invoke(
+        app,
+        [
+            "explain",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--html",
+            "--output",
+            str(output),
+        ],
+    )
+    assert html.exit_code == 0
+    assert "Mapping Explanation" in output.read_text()
+
+
+def test_map_strict_blocks_unmapped_fields() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "map",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--strict",
+        ],
+    )
+    assert result.exit_code == 2
+    assert "Strict mode failed" in result.stdout
+
+
 def test_query_smoke() -> None:
     result = runner.invoke(app, ["query", "fixtures/ocsf_detection_finding.json", "severity_id"])
     assert result.exit_code == 0
@@ -86,6 +132,21 @@ def test_coverage_smoke() -> None:
     )
     assert result.exit_code == 0
     assert "source_field_coverage" in result.stdout
+
+
+def test_coverage_markdown_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "coverage",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--markdown",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "ocsfkit Coverage" in result.stdout
 
 
 def test_validate_mapping_smoke() -> None:
@@ -140,3 +201,23 @@ def test_workshop_smoke() -> None:
     result = runner.invoke(app, ["workshop", "fixtures/okta_login_event.json"])
     assert result.exit_code == 0
     assert "$.published" in result.stdout
+
+
+def test_targets_commands_smoke() -> None:
+    search = runner.invoke(app, ["targets", "search", "user"])
+    assert search.exit_code == 0
+    assert "actor.user.name" in search.stdout
+
+    show = runner.invoke(app, ["targets", "show", "severity_id"])
+    assert show.exit_code == 0
+    assert '"path": "severity_id"' in show.stdout
+
+
+def test_pack_commands_smoke() -> None:
+    listed = runner.invoke(app, ["pack", "list"])
+    assert listed.exit_code == 0
+    assert "aws" in listed.stdout
+
+    validated = runner.invoke(app, ["pack", "validate", "--json"])
+    assert validated.exit_code == 0
+    assert "guardduty-mapping.yaml" in validated.stdout

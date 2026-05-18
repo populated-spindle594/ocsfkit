@@ -6,6 +6,7 @@ from ocsfkit.errors import MappingError
 from ocsfkit.models import LintIssue
 from ocsfkit.paths import extract_json_path, parse_dotted_path
 from ocsfkit.registry import BASE_FIELDS, CLASS_REGISTRY
+from ocsfkit.transform_packs import TRANSFORM_PACKS
 from ocsfkit.transforms import TRANSFORMS
 
 
@@ -54,7 +55,11 @@ def validate_mapping_doc(mapping: dict[str, Any]) -> list[LintIssue]:
             issues.append(_error(f"fields.{target_path}.transform", "must be a string or list"))
         has_custom_transforms = bool(mapping.get("custom_transforms"))
         for transform_name in transforms:
-            if transform_name not in TRANSFORMS and not has_custom_transforms:
+            if (
+                transform_name not in TRANSFORMS
+                and transform_name not in TRANSFORM_PACKS
+                and not has_custom_transforms
+            ):
                 issues.append(
                     _warning(
                         f"fields.{target_path}.transform",

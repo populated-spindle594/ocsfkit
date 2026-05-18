@@ -95,13 +95,16 @@ ocsfkit query fixtures/ocsf_detection_finding.json severity_id
 ocsfkit query fixtures/ocsf_detection_finding.json metadata.product.name
 ocsfkit query fixtures/ocsf_detection_finding.json cloud.account_uid
 ocsfkit coverage fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml
-ocsfkit coverage fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --min-confidence 0.7 --max-unmapped 10
+ocsfkit coverage fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --min-confidence 0.7 --max-unmapped 10 --github-summary
 ocsfkit validate-mapping examples/guardduty-mapping.yaml
 ocsfkit init-mapping fixtures/aws_guardduty_finding.json
 ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
 ocsfkit report fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --output report.html
 ocsfkit workshop fixtures/aws_guardduty_finding.json --mapping examples/guardduty-mapping.yaml
+ocsfkit targets search user
+ocsfkit pack list
 ocsfkit import-schema ./ocsf-schema-export
+ocsfkit sync-schema --output ocsf-schema.json
 ```
 
 ## Command Reference
@@ -122,11 +125,14 @@ ocsfkit parse <input> [--format json|ndjson]
 Applies a mapping YAML and emits OCSF JSON.
 
 ```bash
-ocsfkit map <input> --mapping mapping.yaml [--format json|ndjson] [--explain]
+ocsfkit map <input> --mapping mapping.yaml [--format json|ndjson] [--explain] [--strict]
 ```
 
 Without `--explain`, output is the mapped event. With `--explain`, each output
 item contains both `event` and `explanation`.
+`--strict` fails on guessed fields, missing targets, and unmapped source fields.
+When strict mode is enabled, Python `custom_transforms` files are blocked unless
+`--allow-unsafe-transforms` is also set.
 
 ### `explain`
 
@@ -135,6 +141,8 @@ by hand.
 
 ```bash
 ocsfkit explain <input> --mapping mapping.yaml [--json] [--github-annotations]
+ocsfkit explain <input> --mapping mapping.yaml --markdown
+ocsfkit explain <input> --mapping mapping.yaml --html --output explanation.html
 ```
 
 The report includes mapped fields, defaulted fields, guessed fields, dropped
@@ -182,12 +190,14 @@ For NDJSON, one result is printed per event.
 Summarizes mapping quality across an event stream.
 
 ```bash
-ocsfkit coverage <input> --mapping mapping.yaml [--json]
+ocsfkit coverage <input> --mapping mapping.yaml [--json|--markdown]
 ocsfkit coverage <input> --mapping mapping.yaml --min-confidence 0.80 --max-unmapped 25
 ```
 
 Coverage exits non-zero when a configured quality budget fails. This is useful
 for CI gates that allow gradual mapping work while preventing regressions.
+Use `--github-summary` in GitHub Actions to append a Markdown summary to the job
+summary.
 
 ### `validate-mapping`
 
@@ -195,10 +205,12 @@ Checks a mapping file before it is used against events.
 
 ```bash
 ocsfkit validate-mapping examples/guardduty-mapping.yaml
+ocsfkit validate-mapping examples/guardduty-mapping.yaml --strict
 ```
 
 It reports malformed field specs, unknown built-in transforms, and likely schema
-issues without needing a source event.
+issues without needing a source event. Strict validation treats warnings as
+release-blocking failures.
 
 ### `init-mapping`
 
@@ -252,7 +264,34 @@ that `ocsfkit` understands.
 ```bash
 ocsfkit schema --schema-version 1.7.0
 ocsfkit import-schema ./ocsf-schema-export > schema.json
+ocsfkit sync-schema --output schema.json
 ```
+
+`sync-schema` downloads the upstream OCSF schema archive and imports it into the
+same compact registry format. This keeps production pipelines able to refresh
+schema data without vendoring the full upstream repository.
+
+### `targets`
+
+Search bundled target fields from the terminal:
+
+```bash
+ocsfkit targets list
+ocsfkit targets search endpoint
+ocsfkit targets show actor.user.name
+```
+
+### `pack`
+
+List and validate built-in mapping packs:
+
+```bash
+ocsfkit pack list
+ocsfkit pack validate
+```
+
+Packs group included mappings by source family, such as AWS, identity, network,
+detections, and infrastructure.
 
 ## Mapping Format
 
@@ -395,12 +434,14 @@ The CLI entry point is `ocsfkit = "ocsfkit.cli:app"`.
 This repository is ready for normal Python packaging with `pyproject.toml`.
 Recommended release flow:
 
-1. Tag a version: `git tag v0.4.0 && git push --tags`
+1. Tag a version: `git tag v0.5.0 && git push --tags`
 2. The `.github/workflows/release.yml` workflow builds distributions.
-3. PyPI publishing uses `pypa/gh-action-pypi-publish` with the
-   `PYPI_API_TOKEN` repository secret.
+3. PyPI publishing uses Trusted Publishing when configured, with
+   `PYPI_API_TOKEN` as a fallback.
 4. Homebrew tap updates run when `HOMEBREW_TAP_ENABLED=true` is set as a
    repository variable and `HOMEBREW_TAP_TOKEN` is available as a secret.
+5. GitHub Actions are pinned to commit SHAs, and release artifacts get GitHub
+   provenance attestations.
 
 Do not commit package index tokens. Use PyPI trusted publishing or repository
 secrets for release automation.

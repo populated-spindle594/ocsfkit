@@ -199,6 +199,16 @@ ocsfkit coverage fixtures/guardduty.ndjson \
   --max-unmapped 25
 ```
 
+Append the same review to a GitHub Actions job summary:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --github-summary
+```
+
 Generate HTML for human review artifacts:
 
 ```bash
@@ -211,6 +221,15 @@ Protect individual mappings with fixture tests:
 
 ```bash
 ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+```
+
+For release pipelines, add strict validation:
+
+```bash
+ocsfkit validate-mapping examples/guardduty-mapping.yaml --strict
+ocsfkit explain fixtures/aws_guardduty_finding.json \
+  --mapping examples/guardduty-mapping.yaml \
+  --strict
 ```
 
 ## Compare Mapping Versions

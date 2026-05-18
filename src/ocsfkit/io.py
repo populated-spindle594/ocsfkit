@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -21,22 +22,54 @@ def _read_text(input_path: str) -> tuple[str, str]:
 
 
 def load_events(input_path: str) -> list[dict[str, Any]]:
+    return list(iter_events(input_path))
+
+
+def iter_events(input_path: str) -> Iterator[dict[str, Any]]:
+    if input_path != "-" and Path(input_path).suffix.lower() == ".ndjson":
+        yield from _iter_ndjson_file(Path(input_path))
+        return
     text, suffix = _read_text(input_path)
     if not text.strip():
         raise InputLoadError("Input is empty")
     try:
         if suffix in {".yaml", ".yml"}:
             loaded = yaml.safe_load(text)
-            return _coerce_events(loaded)
+            yield from _coerce_events(loaded)
+            return
         if suffix == ".ndjson":
-            return _load_ndjson(text)
+            yield from _load_ndjson(text)
+            return
         try:
             loaded = json.loads(text)
-            return _coerce_events(loaded)
+            yield from _coerce_events(loaded)
+            return
         except json.JSONDecodeError:
-            return _load_ndjson(text)
+            yield from _load_ndjson(text)
+            return
     except (yaml.YAMLError, json.JSONDecodeError) as exc:
         raise InputLoadError(f"Could not parse input: {exc}") from exc
+
+
+def _iter_ndjson_file(path: Path) -> Iterator[dict[str, Any]]:
+    found = False
+    try:
+        with path.open() as handle:
+            for line_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                found = True
+                try:
+                    value = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise InputLoadError(f"Invalid NDJSON on line {line_number}: {exc}") from exc
+                if not isinstance(value, dict):
+                    raise InputLoadError(f"NDJSON line {line_number} is not a JSON object")
+                yield value
+    except OSError as exc:
+        raise InputLoadError(f"Could not read {path}: {exc}") from exc
+    if not found:
+        raise InputLoadError("No events found in NDJSON input")
 
 
 def _load_ndjson(text: str) -> list[dict[str, Any]]:
@@ -75,4 +108,3 @@ def load_mapping_file(mapping_path: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise InputLoadError("Mapping file must contain a YAML object")
     return value
-

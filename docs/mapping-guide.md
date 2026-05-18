@@ -251,6 +251,26 @@ ocsfkit report fixtures/guardduty.ndjson \
   --output report.html
 ```
 
+Generate Markdown or GitHub Actions job summaries with:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --markdown
+
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --github-summary
+```
+
+Strict mode turns explanation uncertainty into failures:
+
+```bash
+ocsfkit explain fixtures/aws_guardduty_finding.json \
+  --mapping examples/guardduty-mapping.yaml \
+  --strict
+```
+
 ## Workshop Flow
 
 For a new source, workshop mode prints all source paths:
@@ -268,6 +288,31 @@ ocsfkit workshop fixtures/wiz_finding.json \
 
 Pair it with `init-mapping` to create a first draft, then iterate through
 `explain`, `coverage`, and `test-mapping`.
+
+## Target Discovery
+
+Use `targets` when choosing OCSF fields:
+
+```bash
+ocsfkit targets list
+ocsfkit targets search endpoint
+ocsfkit targets show metadata.product.name
+```
+
+This is intentionally a local convenience layer over the bundled registry, not a
+replacement for the full OCSF documentation.
+
+## Mapping Packs
+
+Built-in packs group included examples by source family:
+
+```bash
+ocsfkit pack list
+ocsfkit pack validate
+```
+
+Today the packs are bundled examples. The command shape leaves room for external
+pack install/update support later without changing mapping files.
 
 ## Dropping Source Fields
 

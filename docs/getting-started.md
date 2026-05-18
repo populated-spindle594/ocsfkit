@@ -152,7 +152,8 @@ Use quality budgets in CI:
 ocsfkit coverage fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \
   --min-confidence 0.80 \
-  --max-unmapped 25
+  --max-unmapped 25 \
+  --github-summary
 ```
 
 The command exits non-zero when a budget fails. JSON mode includes
@@ -185,6 +186,18 @@ ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
 
 If the mapping output changes, `test-mapping` prints a semantic diff and exits
 non-zero.
+
+Use strict mode once a mapping is expected to be production-ready:
+
+```bash
+ocsfkit map fixtures/aws_guardduty_finding.json \
+  --mapping examples/guardduty-mapping.yaml \
+  --strict
+```
+
+Strict mode fails on guessed fields, missing target fields, and unmapped source
+fields. It also blocks Python `custom_transforms` files unless
+`--allow-unsafe-transforms` is set.
 
 ## 9. Use Workshop Mode for New Sources
 
@@ -229,4 +242,21 @@ the small registry shape used by `ocsfkit`:
 
 ```bash
 ocsfkit import-schema ./ocsf-schema-export > imported-schema.json
+ocsfkit sync-schema --output imported-schema.json
+```
+
+## 11. Discover Targets and Packs
+
+Search the bundled schema slice without leaving the terminal:
+
+```bash
+ocsfkit targets search user
+ocsfkit targets show actor.user.name
+```
+
+Review the included mapping packs:
+
+```bash
+ocsfkit pack list
+ocsfkit pack validate
 ```

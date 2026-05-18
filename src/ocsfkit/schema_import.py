@@ -38,12 +38,15 @@ def _load_schema_file(path: Path) -> dict[str, Any]:
     class_uid = value.get("uid") or value.get("class_uid")
     caption = value.get("caption") or value.get("name") or value.get("class_name")
     if class_uid and caption:
+        numeric_class_uid = _optional_int(class_uid)
+        if numeric_class_uid is None:
+            return {}
         return {
             "classes": {
                 str(class_uid): {
-                    "class_uid": int(class_uid),
+                    "class_uid": numeric_class_uid,
                     "class_name": str(caption),
-                    "category_uid": int(value.get("category_uid") or 0),
+                    "category_uid": _optional_int(value.get("category_uid")) or 0,
                     "category_name": str(value.get("category_name") or ""),
                     "required": sorted(value.get("required") or []),
                     "recommended": sorted(value.get("recommended") or []),
@@ -59,3 +62,10 @@ def _merge_schema(target: dict[str, Any], source: dict[str, Any]) -> None:
             target.setdefault(key, {}).update(source[key])
     if source.get("schema_version"):
         target["schema_version"] = source["schema_version"]
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
