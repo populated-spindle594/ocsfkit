@@ -280,9 +280,10 @@ The CLI entry point is `ocsfkit = "ocsfkit.cli:app"`.
 This repository is ready for normal Python packaging with `pyproject.toml`.
 Recommended release flow:
 
-1. Tag a version: `git tag v0.2.0 && git push --tags`
+1. Tag a version: `git tag v0.2.1 && git push --tags`
 2. The `.github/workflows/release.yml` workflow builds distributions.
-3. PyPI publishing uses trusted publishing through `pypa/gh-action-pypi-publish`.
+3. PyPI publishing uses trusted publishing through `pypa/gh-action-pypi-publish`
+   when `PYPI_PUBLISH_ENABLED=true` is configured as a repository variable.
 4. Homebrew tap updates run when `HOMEBREW_TAP_ENABLED=true` is set as a
    repository variable and `HOMEBREW_TAP_TOKEN` is available as a secret.
 
