@@ -20,11 +20,13 @@ from ocsfkit.ci import (
     quality_failures_to_sarif,
     scorecard_to_sarif,
 )
+from ocsfkit.completions import completion_script
 from ocsfkit.coverage import enforce_coverage_thresholds, mapping_coverage
 from ocsfkit.diff import diff_events
 from ocsfkit.doctor import run_doctor
 from ocsfkit.drift import mapping_schema_drift
 from ocsfkit.errors import OCSFKitError, QueryError
+from ocsfkit.external_packs import install_pack, update_pack
 from ocsfkit.io import iter_events, load_events, load_mapping_file
 from ocsfkit.junit import mapping_results_to_junit
 from ocsfkit.mapping import apply_mapping
@@ -50,6 +52,7 @@ from ocsfkit.schema_import import import_schema
 from ocsfkit.schema_sync import sync_schema
 from ocsfkit.scorecard import mapping_scorecard, scorecard_markdown
 from ocsfkit.strict import strict_mapping_failures
+from ocsfkit.suggest import suggest_mappings, suggestions_mapping_yaml
 from ocsfkit.summary import coverage_markdown, explanation_markdown
 from ocsfkit.targets import list_targets, search_targets, show_target
 from ocsfkit.transform_test import run_transform_tests
@@ -651,6 +654,54 @@ def init_mapping(
     _run(command)
 
 
+@app.command("suggest")
+def suggest_command(
+    input: Annotated[str, typer.Argument(help="Sample source event file")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    mapping_yaml: Annotated[
+        bool, typer.Option("--mapping-yaml", help="Emit starter mapping YAML")
+    ] = False,
+    limit: Annotated[int, typer.Option("--limit", help="Maximum suggestions")] = 20,
+    product_name: Annotated[
+        str, typer.Option("--product-name", help="metadata.product.name default for YAML mode")
+    ] = "Unknown Product",
+) -> None:
+    """Suggest likely OCSF target fields for a source event."""
+
+    def command() -> None:
+        event = load_events(input)[0]
+        suggestions = suggest_mappings(event, limit)
+        if mapping_yaml:
+            starter = suggestions_mapping_yaml(event, product_name=product_name, limit=limit)
+            console.print(yaml.safe_dump(starter, sort_keys=False))
+        elif json_output:
+            print_json([suggestion.__dict__ for suggestion in suggestions])
+        else:
+            for suggestion in suggestions:
+                transform = f" ({suggestion.transform})" if suggestion.transform else ""
+                console.print(
+                    f"{suggestion.source} -> {suggestion.target}"
+                    f" [{suggestion.confidence:.3f}] {suggestion.reason}{transform}"
+                )
+
+    _run(command)
+
+
+@app.command("completions")
+def completions_command(
+    shell: Annotated[str, typer.Argument(help="Shell: bash, zsh, or fish")],
+) -> None:
+    """Print shell completion setup for ocsfkit."""
+
+    def command() -> None:
+        try:
+            console.print(completion_script(shell), end="")
+        except ValueError as exc:
+            raise OCSFKitError(str(exc)) from exc
+
+    _run(command)
+
+
 @app.command("schema")
 def schema_command(
     version: Annotated[
@@ -844,12 +895,15 @@ def test_mapping_command(
 @app.command("doctor")
 def doctor_command(
     root: Annotated[str, typer.Option("--root", help="Repository root to inspect")] = ".",
+    ci: Annotated[
+        bool, typer.Option("--ci", help="Check GitHub release readiness when gh is available")
+    ] = False,
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
 ) -> None:
     """Check local install, schema, mapping packs, and common release tooling."""
 
     def command() -> None:
-        report = run_doctor(root)
+        report = run_doctor(root, ci)
         if json_output:
             print_json(report)
             return
@@ -919,14 +973,21 @@ def test_transform_command(
 @app.command("report")
 def report_command(
     input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
-    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
     output: Annotated[str, typer.Option("--output", "-o", help="HTML output path")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Mapping YAML path")
+    ] = None,
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Built-in or installed mapping pack alias"),
+    ] = None,
 ) -> None:
     """Generate an HTML mapping coverage report."""
 
     def command() -> None:
-        mapping_doc = load_mapping_file(mapping)
-        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping)
+        mapping_path = _resolve_mapping_path(mapping, pack)
+        mapping_doc = load_mapping_file(mapping_path)
+        custom_transforms = _custom_transforms_for_mapping(mapping_doc, mapping_path)
         report = mapping_coverage(load_events(input), mapping_doc, custom_transforms)
         Path(output).write_text(coverage_html(report))
         console.print(f"Wrote {output}")
@@ -1062,6 +1123,53 @@ def pack_validate(
                 )
         if any(issue["level"] == "error" for result in results for issue in result["issues"]):
             raise typer.Exit(1)
+
+    _run(command)
+
+
+@packs_app.command("install")
+def pack_install(
+    source: Annotated[
+        str,
+        typer.Argument(help="Local pack directory, local zip, or HTTPS zip archive"),
+    ],
+    name: Annotated[str | None, typer.Option("--name", help="Installed pack name")] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Replace an existing installed pack")
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Install an external mapping pack for use with --pack."""
+
+    def command() -> None:
+        result = install_pack(source, name=name, force=force)
+        if json_output:
+            print_json(result)
+        else:
+            console.print(
+                f"Installed pack [bold]{result['name']}[/bold] "
+                f"({result['mapping_count']} mappings)"
+            )
+
+    _run(command)
+
+
+@packs_app.command("update")
+def pack_update(
+    name: Annotated[str, typer.Argument(help="Installed pack name")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Update an installed external mapping pack from its recorded source."""
+
+    def command() -> None:
+        result = update_pack(name)
+        if json_output:
+            print_json(result)
+        else:
+            console.print(
+                f"Updated pack [bold]{result['name']}[/bold] "
+                f"({result['mapping_count']} mappings)"
+            )
 
     _run(command)
 

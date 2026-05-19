@@ -16,6 +16,7 @@ Use it to answer practical review questions:
 ```bash
 pip install ocsfkit
 ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
+ocsfkit suggest fixtures/aws_guardduty_finding.json
 ocsfkit scorecard fixtures/guardduty.ndjson \
   --pack aws-guardduty \
   --min-confidence 0.80 \
@@ -30,8 +31,11 @@ ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
 ocsfkit scan fixtures --sarif --warn-only > ocsfkit-privacy.sarif
 ocsfkit gate fixtures/guardduty.ndjson --pack aws-guardduty --min-confidence 0.70 --max-unmapped 10 --no-strict --sarif > ocsfkit-gate.sarif
 ocsfkit schema --format jsonschema > ocsfkit.schema.json
-ocsfkit doctor
+ocsfkit doctor --ci
 ```
+
+External mapping packs can be installed with `ocsfkit pack install` and then
+used anywhere `--pack` is accepted.
 
 Start with the getting started guide, then use the mapping guide and catalog
 when building or reviewing mappings for a specific telemetry source.

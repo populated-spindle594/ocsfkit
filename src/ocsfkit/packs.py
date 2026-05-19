@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ocsfkit.external_packs import installed_packs, resolve_installed_mapping
 from ocsfkit.io import load_mapping_file
 from ocsfkit.mapping_test import run_mapping_tests
 from ocsfkit.validation import validate_mapping_doc
@@ -46,8 +47,16 @@ BUILTIN_PACKS = {
 def resolve_pack_mapping(name: str) -> str:
     aliases = _pack_aliases()
     key = name.removesuffix(".yaml")
+    installed = resolve_installed_mapping(key)
+    if installed:
+        return installed
     if key not in aliases:
-        available = ", ".join(sorted(aliases))
+        installed_aliases = [
+            f"{pack['name']}/{Path(mapping).stem.removesuffix('-mapping')}"
+            for pack in installed_packs()
+            for mapping in pack["mappings"]
+        ]
+        available = ", ".join(sorted([*aliases, *installed_aliases]))
         raise KeyError(f"Unknown mapping pack {name!r}. Available packs: {available}")
     return _mapping_path(aliases[key])
 
@@ -57,15 +66,28 @@ def load_pack_mapping(name: str) -> dict[str, Any]:
 
 
 def list_packs() -> list[dict[str, Any]]:
-    return [
+    builtins = [
         {
             "name": name,
+            "type": "built-in",
             "mappings": mappings,
             "aliases": [_aliases_for_mapping(name, mapping) for mapping in mappings],
             "mapping_count": len(mappings),
         }
         for name, mappings in sorted(BUILTIN_PACKS.items())
     ]
+    installed = [
+        {
+            **pack,
+            "type": "installed",
+            "aliases": [
+                _aliases_for_mapping(str(pack["name"]), str(mapping))
+                for mapping in pack["mappings"]
+            ],
+        }
+        for pack in installed_packs()
+    ]
+    return [*builtins, *installed]
 
 
 def validate_pack(root: str = ".") -> list[dict[str, Any]]:

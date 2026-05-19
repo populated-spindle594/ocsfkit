@@ -327,6 +327,25 @@ def test_init_mapping_smoke() -> None:
     assert "schema_version" in result.stdout
 
 
+def test_suggest_smoke() -> None:
+    result = runner.invoke(app, ["suggest", "fixtures/aws_guardduty_finding.json", "--json"])
+    assert result.exit_code == 0
+    assert "severity_id" in result.stdout
+
+    mapping = runner.invoke(
+        app,
+        ["suggest", "fixtures/aws_guardduty_finding.json", "--mapping-yaml", "--limit", "5"],
+    )
+    assert mapping.exit_code == 0
+    assert "target_class" in mapping.stdout
+
+
+def test_completions_smoke() -> None:
+    result = runner.invoke(app, ["completions", "zsh"])
+    assert result.exit_code == 0
+    assert "_OCSFKIT_COMPLETE=zsh_source" in result.stdout
+
+
 def test_schema_smoke() -> None:
     result = runner.invoke(app, ["schema"])
     assert result.exit_code == 0
@@ -461,6 +480,49 @@ def test_pack_commands_smoke() -> None:
     validated = runner.invoke(app, ["pack", "validate", "--json"])
     assert validated.exit_code == 0
     assert "guardduty-mapping.yaml" in validated.stdout
+
+
+def test_external_pack_install_and_resolve_smoke(tmp_path) -> None:
+    pack_home = tmp_path / "packs"
+    pack = tmp_path / "source-pack"
+    pack.mkdir()
+    (pack / "pack.yaml").write_text("name: local\nversion: 1\n")
+    (pack / "guardduty-mapping.yaml").write_text(
+        """
+schema_version: 1.7.0
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+fields:
+  time:
+    from: $.updatedAt
+    transform: parse_timestamp
+  severity_id:
+    default: 1
+  metadata.product.name:
+    default: Local Pack
+"""
+    )
+    env = {"OCSFKIT_PACK_HOME": str(pack_home)}
+    installed = runner.invoke(
+        app,
+        ["pack", "install", str(pack), "--json"],
+        env=env,
+    )
+    assert installed.exit_code == 0
+    assert '"name": "local"' in installed.stdout
+
+    listed = runner.invoke(app, ["pack", "list", "--json"], env=env)
+    assert listed.exit_code == 0
+    assert '"type": "installed"' in listed.stdout
+
+    mapped = runner.invoke(
+        app,
+        ["map", "fixtures/aws_guardduty_finding.json", "--pack", "local/guardduty"],
+        env=env,
+    )
+    assert mapped.exit_code == 0
+    assert "Local Pack" in mapped.stdout
 
 
 def test_doctor_and_benchmark_smoke() -> None:

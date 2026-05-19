@@ -43,6 +43,14 @@ equivalent shortcut is:
 ocsfkit map fixtures/aws_guardduty_finding.json --pack aws-guardduty
 ```
 
+For an unfamiliar event shape, ask `ocsfkit` for a starting point before writing
+YAML by hand:
+
+```bash
+ocsfkit suggest fixtures/aws_guardduty_finding.json
+ocsfkit suggest fixtures/aws_guardduty_finding.json --mapping-yaml > starter.yaml
+```
+
 Expected high-value fields in the output include:
 
 ```json
@@ -346,6 +354,14 @@ Pack aliases work directly with mapping-quality commands:
 ```bash
 ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
 ocsfkit scorecard fixtures/guardduty.ndjson --pack aws-guardduty --max-unmapped 25
+```
+
+Install external packs when mappings live in a separate reviewed repository:
+
+```bash
+ocsfkit pack install https://github.com/acme/ocsfkit-packs/archive/refs/tags/v1.2.0.zip \
+  --name acme
+ocsfkit map sample.json --pack acme/guardduty
 ```
 
 Generate the mapping catalog and check for schema drift:

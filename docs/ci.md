@@ -14,6 +14,8 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Install ocsfkit
         run: python -m pip install ocsfkit
+      - name: Check release automation readiness
+        run: ocsfkit doctor --ci
       - name: Validate mappings
         run: ocsfkit pack validate
       - name: Score GuardDuty mapping
@@ -65,7 +67,7 @@ steps:
       - "ocsfkit pack validate"
       - "ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml"
       - "ocsfkit scan fixtures --warn-only"
-      - "ocsfkit doctor"
+      - "ocsfkit doctor --ci"
 ```
 
 ## Makefile
@@ -76,7 +78,7 @@ ocsfkit:
 	ocsfkit pack validate
 	ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
 	ocsfkit scan fixtures --warn-only
-	ocsfkit doctor
+	ocsfkit doctor --ci
 	ocsfkit benchmark fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --iterations 3
 	ocsfkit gate fixtures/guardduty.ndjson --pack aws-guardduty --min-confidence 0.70 --max-unmapped 10 --no-strict --sarif > ocsfkit-gate.sarif
 ```
@@ -89,6 +91,20 @@ docker run --rm -v "$PWD:/work" -w /work ghcr.io/pfrederiksen/ocsfkit:latest \
   --pack aws-guardduty \
   --min-confidence 0.80 \
   --max-unmapped 25
+```
+
+## Post-Release Verification
+
+The repository includes `.github/workflows/post-release.yml`. When a GitHub
+release is published, it installs the released version from PyPI and reinstalls
+the Homebrew formula from `pfrederiksen/tap`, then runs smoke commands. This
+catches packaging or tap drift after the release workflow has completed.
+
+Before tagging a release, run:
+
+```bash
+ocsfkit doctor --ci
+uv build
 ```
 
 ## Templates

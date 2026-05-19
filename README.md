@@ -375,6 +375,23 @@ ocsfkit map sample.json --pack aws-guardduty --format ndjson
 ocsfkit gate sample.ndjson --pack aws-guardduty --no-strict --sarif > ocsfkit-gate.sarif
 ```
 
+Install reviewed external packs when your team wants to version mappings outside
+the main `ocsfkit` repository:
+
+```bash
+ocsfkit pack install https://github.com/acme/ocsfkit-packs/archive/refs/tags/v1.2.0.zip \
+  --name acme
+ocsfkit map sample.json --pack acme/guardduty
+ocsfkit pack update acme
+```
+
+Start a new mapping with suggestions from a representative event:
+
+```bash
+ocsfkit suggest sample.json
+ocsfkit suggest sample.json --mapping-yaml > starter-mapping.yaml
+```
+
 ## Command Reference
 
 | Command | Purpose |
@@ -397,6 +414,7 @@ ocsfkit gate sample.ndjson --pack aws-guardduty --no-strict --sarif > ocsfkit-ga
 | `doctor` | Check local install health, schema support, and mapping pack validity. |
 | `benchmark <input> --mapping mapping.yaml` | Measure mapping throughput on a representative corpus. |
 | `init-mapping <input>` | Generate a starter mapping worksheet from a representative event. |
+| `suggest <input>` | Suggest likely source-to-OCSF field mappings and optional starter YAML. |
 | `test-mapping spec.yaml` | Run fixture-based mapping regression tests. |
 | `test-transform spec.yaml` | Run YAML-defined tests for built-in or custom transforms. |
 | `report <input> --mapping mapping.yaml` | Write a standalone HTML mapping coverage report. |
@@ -405,7 +423,8 @@ ocsfkit gate sample.ndjson --pack aws-guardduty --no-strict --sarif > ocsfkit-ga
 | `import-schema <path>` | Convert upstream-style schema files into the compact registry format. |
 | `sync-schema --output schema.json` | Download upstream OCSF schema data and import it. |
 | `targets list/search/show` | Discover known OCSF target fields. |
-| `pack list/validate` | Inspect and validate included mapping packs. |
+| `pack list/validate/install/update` | Inspect, validate, install, and update mapping packs. |
+| `completions bash\|zsh\|fish` | Print shell completion setup. |
 
 Useful output modes:
 
@@ -423,6 +442,7 @@ ocsfkit scorecard sample.ndjson --mapping mapping.yaml --markdown
 ocsfkit schema --format jsonschema > ocsfkit.schema.json
 ocsfkit catalog --output docs/mapping-catalog.md
 ocsfkit test-mapping tests/goldens --junit mapping-tests.xml
+ocsfkit completions zsh
 ```
 
 Strict mode is available on mapping-quality commands:
@@ -618,6 +638,10 @@ More workflow documentation:
   code-scanning integrations.
 - `ocsfkit doctor` and `ocsfkit benchmark` for release readiness and throughput
   checks.
+- `ocsfkit doctor --ci` for GitHub release automation checks, including the
+  PyPI environment and Homebrew tap settings when `gh` is authenticated.
+- `.github/workflows/post-release.yml` for installing the published version from
+  PyPI and Homebrew after a release is created.
 - MkDocs configuration for publishing a navigable documentation site from
   `docs/`.
 
@@ -650,6 +674,19 @@ The repository is configured for normal Python and Homebrew releases:
    release archive before committing the formula update.
 5. GitHub Actions are pinned to commit SHAs.
 6. Release artifacts get GitHub provenance attestations.
+7. The post-release workflow installs the published package from PyPI and the
+   Homebrew tap, then runs smoke commands against both installs.
+
+To verify release readiness before tagging:
+
+```bash
+ocsfkit doctor --ci
+gh run list --repo pfrederiksen/ocsfkit --limit 10
+```
 
 Do not commit package index tokens. Use PyPI Trusted Publishing and scoped
 repository secrets for release automation.
+
+Release artifacts include GitHub provenance attestations. Use GitHub's
+attestation tooling against the files attached to a release when you need a
+machine-verifiable supply-chain record.

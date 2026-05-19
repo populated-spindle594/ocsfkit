@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.0
+
+- Added external mapping pack install/update support with local and HTTPS zip
+  sources.
+- Added `ocsfkit suggest` to propose likely OCSF target fields and starter YAML
+  from representative events.
+- Added `ocsfkit completions` for shell completion setup snippets.
+- Added `ocsfkit doctor --ci` release-readiness checks for GitHub automation.
+- Added post-release verification for PyPI and Homebrew installs.
+- Improved HTML explanation and coverage reports with richer review context.
+
 ## 0.9.0
 
 - Added `ocsfkit --version`.

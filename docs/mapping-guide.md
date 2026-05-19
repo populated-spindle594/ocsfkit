@@ -342,6 +342,16 @@ ocsfkit workshop fixtures/wiz_finding.json \
 Pair it with `init-mapping` to create a first draft, then iterate through
 `explain`, `coverage`, and `test-mapping`.
 
+For an even faster starting point, use heuristic suggestions:
+
+```bash
+ocsfkit suggest fixtures/wiz_finding.json
+ocsfkit suggest fixtures/wiz_finding.json --mapping-yaml > starter.yaml
+```
+
+Suggestions are intentionally conservative. Treat them as a review queue, not as
+an automatic migration.
+
 ## Target Discovery
 
 Use `targets` when choosing OCSF fields:
@@ -370,6 +380,20 @@ Packs are included in installed wheels, so CI jobs can use aliases without
 checking out the repository's `examples/` directory. Use the aliases printed by
 `pack list`, such as `aws-guardduty`, `identity-okta-authentication`, or
 `network-zeek-conn`.
+
+External packs can be installed from a local directory, local zip, or HTTPS zip
+archive. A pack can include a `pack.yaml` manifest and any number of mapping
+YAML files:
+
+```bash
+ocsfkit pack install ./company-packs --name company
+ocsfkit pack list
+ocsfkit explain sample.json --pack company/guardduty
+ocsfkit pack update company
+```
+
+Prefer immutable release archives in CI so mapping pack updates are reviewed and
+repeatable.
 
 Once a mapping has no unexpected unmapped fields, use a strict production gate:
 

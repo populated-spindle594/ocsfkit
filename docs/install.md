@@ -37,6 +37,16 @@ brew tap pfrederiksen/tap
 brew install ocsfkit
 ```
 
+## Shell Completions
+
+Print the setup snippet for your shell and add it to your shell profile:
+
+```bash
+ocsfkit completions zsh
+ocsfkit completions bash
+ocsfkit completions fish
+```
+
 ## Docker
 
 Build locally:
@@ -88,3 +98,19 @@ repos:
       - id: ocsfkit-validate-mapping
       - id: ocsfkit-pack-validate
 ```
+
+## Mapping Packs
+
+Built-in packs are bundled with the Python package and Homebrew formula. Teams
+can also install reviewed external packs from a local directory, zip file, or
+HTTPS zip archive:
+
+```bash
+ocsfkit pack install ./company-ocsfkit-pack --name company
+ocsfkit pack list
+ocsfkit map sample.json --pack company/guardduty
+ocsfkit pack update company
+```
+
+For reproducible CI, install external packs from immutable release archives
+rather than branch archives.
