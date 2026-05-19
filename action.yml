@@ -1,0 +1,103 @@
+name: ocsfkit
+description: Run OCSF mapping-quality checks in GitHub Actions.
+author: ocsfkit contributors
+
+inputs:
+  input:
+    description: Source event JSON, YAML, or NDJSON file.
+    required: true
+  mapping:
+    description: Mapping YAML path. Use either mapping or pack.
+    required: false
+    default: ""
+  pack:
+    description: Built-in or installed mapping pack alias. Use either mapping or pack.
+    required: false
+    default: ""
+  version:
+    description: ocsfkit version to install.
+    required: false
+    default: ""
+  min-confidence:
+    description: Minimum average mapping confidence.
+    required: false
+    default: "0.80"
+  max-unmapped:
+    description: Maximum unmapped source-field count.
+    required: false
+    default: "25"
+  max-lint-errors:
+    description: Maximum mapped-event lint error count.
+    required: false
+    default: "0"
+  strict:
+    description: Fail on guessed, missing, or unmapped fields.
+    required: false
+    default: "false"
+  sarif-output:
+    description: Optional SARIF output path.
+    required: false
+    default: ""
+  github-summary:
+    description: Append a Markdown scorecard to the GitHub job summary.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      with:
+        python-version: "3.x"
+    - name: Install ocsfkit
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -n "${{ inputs.version }}" ]]; then
+          python -m pip install "ocsfkit==${{ inputs.version }}"
+        else
+          python -m pip install ocsfkit
+        fi
+    - name: Run mapping score
+      shell: bash
+      run: |
+        set -euo pipefail
+        mapping_arg=()
+        if [[ -n "${{ inputs.mapping }}" && -n "${{ inputs.pack }}" ]]; then
+          echo "Use either mapping or pack, not both" >&2
+          exit 2
+        elif [[ -n "${{ inputs.mapping }}" ]]; then
+          mapping_arg=(--mapping "${{ inputs.mapping }}")
+        elif [[ -n "${{ inputs.pack }}" ]]; then
+          mapping_arg=(--pack "${{ inputs.pack }}")
+        else
+          echo "Either mapping or pack is required" >&2
+          exit 2
+        fi
+
+        strict_arg=(--no-strict)
+        if [[ "${{ inputs.strict }}" == "true" ]]; then
+          strict_arg=(--strict)
+        fi
+
+        if [[ -n "${{ inputs['sarif-output'] }}" ]]; then
+          ocsfkit gate "${{ inputs.input }}" "${mapping_arg[@]}" \
+            --min-confidence "${{ inputs['min-confidence'] }}" \
+            --max-unmapped "${{ inputs['max-unmapped'] }}" \
+            --max-lint-errors "${{ inputs['max-lint-errors'] }}" \
+            "${strict_arg[@]}" \
+            --sarif > "${{ inputs['sarif-output'] }}"
+        fi
+
+        summary_arg=()
+        if [[ "${{ inputs['github-summary'] }}" == "true" ]]; then
+          summary_arg=(--github-summary)
+        fi
+
+        ocsfkit score "${{ inputs.input }}" "${mapping_arg[@]}" \
+          --min-confidence "${{ inputs['min-confidence'] }}" \
+          --max-unmapped "${{ inputs['max-unmapped'] }}" \
+          --max-lint-errors "${{ inputs['max-lint-errors'] }}" \
+          "${strict_arg[@]}" \
+          "${summary_arg[@]}"

@@ -9,5 +9,6 @@ nav:
   - Install: install.md
   - Mapping Guide: mapping-guide.md
   - Mapping Catalog: mapping-catalog.md
+  - Demo: demo.md
   - CI Examples: ci.md
   - Real-World Workflows: real-world-workflows.md

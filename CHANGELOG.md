@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0
+
+- Added `ocsfkit batch` for corpus conversion with normalized output,
+  explanation JSON, lint JSON, unmapped-field inventory, and HTML coverage
+  artifacts.
+- Added `ocsfkit describe` for bundled OCSF fields, classes, enums, and schema
+  version support.
+- Added `ocsfkit score` as a shorter alias for `ocsfkit scorecard`.
+- Added `ocsfkit mapping test` as a namespaced alias for golden mapping tests.
+- Added a reusable GitHub composite action for mapping-quality gates.
+- Added a documented demo walkthrough for raw GuardDuty to reviewed OCSF.
+
 ## 0.10.0
 
 - Added external mapping pack install/update support with local and HTTPS zip

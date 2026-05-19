@@ -20,7 +20,7 @@ jobs:
         run: ocsfkit pack validate
       - name: Score GuardDuty mapping
         run: |
-          ocsfkit scorecard fixtures/guardduty.ndjson \
+          ocsfkit score fixtures/guardduty.ndjson \
             --pack aws-guardduty \
             --min-confidence 0.80 \
             --max-unmapped 25 \
@@ -34,12 +34,38 @@ jobs:
             --no-strict \
             --sarif > ocsfkit-gate.sarif
       - name: Write mapping test report
-        run: ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+        run: ocsfkit mapping test tests/goldens --junit ocsfkit-mapping.xml
       - name: Scan fixtures for sensitive data
         run: ocsfkit scan fixtures --sarif --warn-only > ocsfkit-privacy.sarif
       - name: Check schema drift
         run: ocsfkit schema-drift examples/guardduty-mapping.yaml --sarif > ocsfkit-drift.sarif
 ```
+
+## Reusable GitHub Action
+
+For a compact workflow, call the repository action directly:
+
+```yaml
+name: ocsfkit
+
+on: [pull_request]
+
+jobs:
+  mapping-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pfrederiksen/ocsfkit@v0.11.0
+        with:
+          input: fixtures/guardduty.ndjson
+          pack: aws-guardduty
+          min-confidence: "0.70"
+          max-unmapped: "10"
+          sarif-output: ocsfkit-gate.sarif
+```
+
+The action installs `ocsfkit`, runs the same score/gate checks as the CLI, and
+can write SARIF for code-scanning upload steps.
 
 ## GitLab CI
 

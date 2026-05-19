@@ -17,19 +17,21 @@ Use it to answer practical review questions:
 pip install ocsfkit
 ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
 ocsfkit suggest fixtures/aws_guardduty_finding.json
-ocsfkit scorecard fixtures/guardduty.ndjson \
+ocsfkit score fixtures/guardduty.ndjson \
   --pack aws-guardduty \
   --min-confidence 0.80 \
   --max-unmapped 25
+ocsfkit describe class_uid 2004
 ```
 
 ## Production Checks
 
 ```bash
 ocsfkit validate-mapping examples/guardduty-mapping.yaml --strict
-ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+ocsfkit mapping test tests/goldens --junit ocsfkit-mapping.xml
 ocsfkit scan fixtures --sarif --warn-only > ocsfkit-privacy.sarif
 ocsfkit gate fixtures/guardduty.ndjson --pack aws-guardduty --min-confidence 0.70 --max-unmapped 10 --no-strict --sarif > ocsfkit-gate.sarif
+ocsfkit batch fixtures/guardduty.ndjson --pack aws-guardduty --output guardduty.ocsf.ndjson --coverage-html coverage.html
 ocsfkit schema --format jsonschema > ocsfkit.schema.json
 ocsfkit doctor --ci
 ```

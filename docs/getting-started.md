@@ -186,10 +186,10 @@ ocsfkit coverage fixtures/guardduty.ndjson \
 ```
 
 For a single production-readiness gate that combines coverage, lint, and
-strict-mode checks, use `scorecard` or the stricter `gate` shortcut:
+strict-mode checks, use `score`/`scorecard` or the stricter `gate` shortcut:
 
 ```bash
-ocsfkit scorecard fixtures/guardduty.ndjson \
+ocsfkit score fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \
   --min-confidence 0.80 \
   --max-unmapped 25 \
@@ -211,6 +211,20 @@ ocsfkit report fixtures/guardduty.ndjson \
   --output report.html
 ```
 
+For migration reviews, `batch` writes the normalized corpus and the evidence
+reviewers usually ask for:
+
+```bash
+ocsfkit batch fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --output /tmp/guardduty.ocsf.ndjson \
+  --explain-json /tmp/guardduty.explain.json \
+  --lint-json /tmp/guardduty.lint.json \
+  --unmapped-json /tmp/guardduty.unmapped.json \
+  --coverage-html /tmp/guardduty.coverage.html \
+  --report-json /tmp/guardduty.report.json
+```
+
 ## 8. Lock in Regression Tests
 
 Mapping behavior should be testable like code. A mapping test spec names the
@@ -228,6 +242,7 @@ Run it with:
 ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
 ocsfkit test-mapping tests/fixtures
 ocsfkit test-mapping tests/fixtures --junit ocsfkit-mapping.xml
+ocsfkit mapping test tests/fixtures --junit ocsfkit-mapping.xml
 ```
 
 If the mapping output changes, `test-mapping` prints a semantic diff and exits
@@ -317,6 +332,10 @@ The bundled schema slice can be inspected directly:
 
 ```bash
 ocsfkit schema --schema-version 1.7.0
+ocsfkit describe schema_version
+ocsfkit describe class_uid 2004
+ocsfkit describe severity_id
+ocsfkit describe actor.user.name
 ```
 
 For editor integrations or external validators, export JSON Schema:
@@ -353,7 +372,7 @@ Pack aliases work directly with mapping-quality commands:
 
 ```bash
 ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
-ocsfkit scorecard fixtures/guardduty.ndjson --pack aws-guardduty --max-unmapped 25
+ocsfkit score fixtures/guardduty.ndjson --pack aws-guardduty --max-unmapped 25
 ```
 
 Install external packs when mappings live in a separate reviewed repository:

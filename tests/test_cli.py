@@ -279,6 +279,25 @@ def test_scorecard_smoke() -> None:
     assert '"grade": "C"' in result.stdout
 
 
+def test_score_alias_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "score",
+            "fixtures/guardduty.ndjson",
+            "--pack",
+            "guardduty",
+            "--min-confidence",
+            "0.7",
+            "--max-unmapped",
+            "10",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    assert '"passed": true' in result.stdout
+
+
 def test_scorecard_sarif_smoke() -> None:
     result = runner.invoke(
         app,
@@ -352,6 +371,20 @@ def test_schema_smoke() -> None:
     assert "Detection Finding" in result.stdout
 
 
+def test_describe_smoke() -> None:
+    field = runner.invoke(app, ["describe", "actor.user.name"])
+    assert field.exit_code == 0
+    assert "actor.user.name" in field.stdout
+
+    ocsf_class = runner.invoke(app, ["describe", "class_uid", "2004", "--json"])
+    assert ocsf_class.exit_code == 0
+    assert '"class_name": "Detection Finding"' in ocsf_class.stdout
+
+    enum_value = runner.invoke(app, ["describe", "severity_id", "4"])
+    assert enum_value.exit_code == 0
+    assert "High" in enum_value.stdout
+
+
 def test_schema_jsonschema_smoke() -> None:
     result = runner.invoke(app, ["schema", "--format", "jsonschema"])
     assert result.exit_code == 0
@@ -380,6 +413,12 @@ def test_test_mapping_junit_smoke(tmp_path) -> None:
     )
     assert result.exit_code == 0
     assert "<testsuite" in output.read_text()
+
+
+def test_mapping_test_alias_smoke() -> None:
+    result = runner.invoke(app, ["mapping", "test", "tests/fixtures/guardduty-test.yaml"])
+    assert result.exit_code == 0
+    assert "passed" in result.stdout
 
 
 def test_test_transform_smoke() -> None:
@@ -441,6 +480,43 @@ def test_report_smoke(tmp_path) -> None:
     )
     assert result.exit_code == 0
     assert "Mapping Report" in output.read_text()
+
+
+def test_batch_smoke(tmp_path) -> None:
+    output = tmp_path / "mapped.ndjson"
+    explain = tmp_path / "explain.json"
+    lint = tmp_path / "lint.json"
+    unmapped = tmp_path / "unmapped.json"
+    coverage = tmp_path / "coverage.html"
+    report = tmp_path / "report.json"
+    result = runner.invoke(
+        app,
+        [
+            "batch",
+            "fixtures/guardduty.ndjson",
+            "--pack",
+            "aws-guardduty",
+            "--output",
+            str(output),
+            "--explain-json",
+            str(explain),
+            "--lint-json",
+            str(lint),
+            "--unmapped-json",
+            str(unmapped),
+            "--coverage-html",
+            str(coverage),
+            "--report-json",
+            str(report),
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Processed 2 events" in result.stdout
+    assert output.read_text().count("\n") == 2
+    assert "mapped_fields" in explain.read_text()
+    assert "$.resource" in unmapped.read_text()
+    assert "Mapping Report" in coverage.read_text()
+    assert '"events": 2' in report.read_text()
 
 
 def test_import_schema_smoke(tmp_path) -> None:

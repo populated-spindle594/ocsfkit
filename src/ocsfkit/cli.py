@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
@@ -9,6 +10,7 @@ import yaml
 
 from ocsfkit import __version__
 from ocsfkit.baseline import check_baseline, create_baseline
+from ocsfkit.batch import run_batch
 from ocsfkit.benchmark import benchmark_mapping
 from ocsfkit.catalog import catalog_markdown, mapping_catalog
 from ocsfkit.ci import (
@@ -22,6 +24,7 @@ from ocsfkit.ci import (
 )
 from ocsfkit.completions import completion_script
 from ocsfkit.coverage import enforce_coverage_thresholds, mapping_coverage
+from ocsfkit.describe import describe
 from ocsfkit.diff import diff_events
 from ocsfkit.doctor import run_doctor
 from ocsfkit.drift import mapping_schema_drift
@@ -69,9 +72,11 @@ app = typer.Typer(
 targets_app = typer.Typer(help="Search and inspect bundled OCSF target fields.")
 packs_app = typer.Typer(help="List and validate built-in mapping packs.")
 baseline_app = typer.Typer(help="Create and check approved mapping-quality baselines.")
+mapping_app = typer.Typer(help="Validate and regression-test mapping files.")
 app.add_typer(targets_app, name="targets")
 app.add_typer(packs_app, name="pack")
 app.add_typer(baseline_app, name="baseline")
+app.add_typer(mapping_app, name="mapping")
 
 
 OutputFormat = Annotated[str, typer.Option("--format", help="Output format: json or ndjson")]
@@ -351,6 +356,59 @@ def query(
     _run(command)
 
 
+@app.command("describe")
+def describe_command(
+    subject: Annotated[
+        str,
+        typer.Argument(help="Target field, enum, class_uid, or schema_version"),
+    ],
+    value: Annotated[
+        str | None,
+        typer.Argument(help="Optional enum or class value, e.g. 'class_uid 2004'"),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Describe bundled OCSF fields, classes, enums, and schema versions."""
+
+    def command() -> None:
+        payload = describe(subject, value)
+        if json_output:
+            print_json(payload)
+            return
+        kind = payload.get("kind")
+        if kind == "field":
+            console.print(f"[bold]{payload['path']}[/bold] [{payload['type']}]")
+            markers = []
+            if payload.get("required"):
+                markers.append("required")
+            if payload.get("recommended"):
+                markers.append("recommended")
+            if markers:
+                console.print(f"Status: {', '.join(markers)}")
+            if payload.get("classes_required"):
+                console.print(f"Required for classes: {payload['classes_required']}")
+            if payload.get("classes_recommended"):
+                console.print(f"Recommended for classes: {payload['classes_recommended']}")
+        elif kind == "class":
+            console.print(f"[bold]{payload['class_name']}[/bold] ({payload['class_uid']})")
+            console.print(f"Category: {payload['category_name']} ({payload['category_uid']})")
+            console.print(f"Required: {', '.join(payload['required'])}")
+            console.print(f"Recommended: {', '.join(payload['recommended'])}")
+        elif kind == "enum":
+            console.print(f"[bold]{payload['name']}[/bold]")
+            for enum_value, label in payload["values"].items():
+                console.print(f"  {enum_value}: {label}")
+        elif kind == "enum_value":
+            console.print(f"{payload['name']} {payload['value']}: {payload['label']}")
+        elif kind == "schema_version":
+            console.print(f"Default: {payload['default']}")
+            console.print(f"Supported: {', '.join(payload['supported'])}")
+        else:
+            console.print(f"[yellow]{payload['message']}[/yellow]")
+
+    _run(command)
+
+
 @app.command("scorecard")
 def scorecard_command(
     input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
@@ -434,6 +492,9 @@ def scorecard_command(
             raise typer.Exit(1)
 
     _run(command)
+
+
+score_command = app.command("score")(scorecard_command)
 
 
 @app.command("coverage")
@@ -892,6 +953,18 @@ def test_mapping_command(
     _run(command)
 
 
+@mapping_app.command("test")
+def mapping_test_command(
+    spec: Annotated[str, typer.Argument(help="Mapping test YAML path or directory")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    junit: Annotated[
+        str | None, typer.Option("--junit", help="Write JUnit XML results to a file")
+    ] = None,
+) -> None:
+    """Run one or more mapping fixture tests against expected OCSF output."""
+    test_mapping_command(spec, json_output=json_output, junit=junit)
+
+
 @app.command("doctor")
 def doctor_command(
     root: Annotated[str, typer.Option("--root", help="Repository root to inspect")] = ".",
@@ -991,6 +1064,85 @@ def report_command(
         report = mapping_coverage(load_events(input), mapping_doc, custom_transforms)
         Path(output).write_text(coverage_html(report))
         console.print(f"Wrote {output}")
+
+    _run(command)
+
+
+@app.command("batch")
+def batch_command(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Mapping YAML path")
+    ] = None,
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Built-in or installed mapping pack alias"),
+    ] = None,
+    output: Annotated[
+        str | None,
+        typer.Option("--output", "-o", help="Write normalized OCSF events to this path"),
+    ] = None,
+    explain_json: Annotated[
+        str | None,
+        typer.Option("--explain-json", help="Write mapping explanations to this JSON file"),
+    ] = None,
+    lint_json: Annotated[
+        str | None, typer.Option("--lint-json", help="Write lint issues to this JSON file")
+    ] = None,
+    unmapped_json: Annotated[
+        str | None,
+        typer.Option("--unmapped-json", help="Write unmapped source-field inventory"),
+    ] = None,
+    coverage_html_output: Annotated[
+        str | None, typer.Option("--coverage-html", help="Write standalone HTML coverage report")
+    ] = None,
+    report_json: Annotated[
+        str | None, typer.Option("--report-json", help="Write batch summary JSON")
+    ] = None,
+    format: OutputFormat = "ndjson",  # noqa: A002
+    allow_unsafe_transforms: Annotated[
+        bool, typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files")
+    ] = False,
+) -> None:
+    """Map a corpus and write normalized output plus review artifacts."""
+
+    def command() -> None:
+        _validate_format(format)
+        mapping_path = _resolve_mapping_path(mapping, pack)
+        mapping_doc = load_mapping_file(mapping_path)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping_path, allow_unsafe_transforms
+        )
+        result = run_batch(iter_events(input), mapping_doc, custom_transforms)
+        if output:
+            _write_events_file(output, result.events, format)
+        if explain_json:
+            _write_json_file(
+                explain_json,
+                [explanation.model_dump() for explanation in result.explanations],
+            )
+        if lint_json:
+            _write_json_file(
+                lint_json,
+                [[issue.model_dump() for issue in issues] for issues in result.lint_issues],
+            )
+        if unmapped_json:
+            _write_json_file(unmapped_json, result.report.unmapped_source_fields)
+        if coverage_html_output:
+            Path(coverage_html_output).write_text(coverage_html(result.report.coverage))
+            console.print(f"Wrote {coverage_html_output}")
+        if report_json:
+            _write_json_file(report_json, result.report.model_dump())
+        if not any(
+            [output, explain_json, lint_json, unmapped_json, coverage_html_output, report_json]
+        ):
+            print_json(result.report.model_dump())
+        else:
+            console.print(
+                f"Processed {result.report.events} events; "
+                f"confidence {result.report.coverage.average_confidence:.3f}; "
+                f"lint errors {result.report.lint_errors}"
+            )
 
     _run(command)
 
@@ -1287,6 +1439,22 @@ def _write_or_print(text: str, output: str | None) -> None:
         console.print(f"Wrote {output}")
     else:
         console.print(text)
+
+
+def _write_json_file(path: str, payload: object) -> None:
+    Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
+    console.print(f"Wrote {path}")
+
+
+def _write_events_file(path: str, events: list[dict], format_name: str) -> None:
+    if format_name == "ndjson":
+        Path(path).write_text(
+            "\n".join(json.dumps(event, sort_keys=True, default=str) for event in events) + "\n"
+        )
+    else:
+        payload = events[0] if len(events) == 1 else events
+        Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
+    console.print(f"Wrote {path}")
 
 
 def _load_scan_events(input_path: str) -> list[dict]:

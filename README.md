@@ -101,6 +101,11 @@ ocsfkit scorecard fixtures/guardduty.ndjson \
   --max-unmapped 10 \
   --github-summary
 
+ocsfkit score fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --min-confidence 0.70 \
+  --max-unmapped 10
+
 ocsfkit gate fixtures/guardduty.ndjson \
   --pack aws-guardduty \
   --min-confidence 0.70 \
@@ -123,10 +128,25 @@ ocsfkit scan fixtures --warn-only
 ocsfkit redact fixtures/aws_guardduty_finding.json --output redacted.json
 ```
 
+Batch-convert a corpus and keep review artifacts:
+
+```bash
+ocsfkit batch fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --output guardduty.ocsf.ndjson \
+  --explain-json guardduty.explain.json \
+  --lint-json guardduty.lint.json \
+  --unmapped-json guardduty.unmapped.json \
+  --coverage-html guardduty.coverage.html \
+  --report-json guardduty.report.json
+```
+
 Query common OCSF fields:
 
 ```bash
 ocsfkit query fixtures/ocsf_detection_finding.json metadata.product.name
+ocsfkit describe actor.user.name
+ocsfkit describe class_uid 2004
 ```
 
 ## Example Output
@@ -343,6 +363,7 @@ For test-report dashboards, emit JUnit from golden mapping tests:
 
 ```bash
 ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+ocsfkit mapping test tests/goldens --junit ocsfkit-mapping.xml
 ```
 
 ### Compare Mapping Versions
@@ -392,6 +413,18 @@ ocsfkit suggest sample.json
 ocsfkit suggest sample.json --mapping-yaml > starter-mapping.yaml
 ```
 
+Use the reusable GitHub Action when you want a concise mapping-quality gate:
+
+```yaml
+- uses: pfrederiksen/ocsfkit@v0.11.0
+  with:
+    input: fixtures/guardduty.ndjson
+    pack: aws-guardduty
+    min-confidence: "0.70"
+    max-unmapped: "10"
+    sarif-output: ocsfkit-gate.sarif
+```
+
 ## Command Reference
 
 | Command | Purpose |
@@ -403,8 +436,11 @@ ocsfkit suggest sample.json --mapping-yaml > starter-mapping.yaml
 | `diff <before> <after>` | Compare two OCSF events or same-length event streams. |
 | `diff-mapping <before> <after>` | Compare two mapping YAML files semantically. |
 | `query <input> <path>` | Extract common OCSF fields with dotted paths. |
+| `describe <subject> [value]` | Explain bundled fields, classes, enums, and schema-version support. |
+| `batch <input> --mapping mapping.yaml` | Convert a corpus and write normalized output plus review artifacts. |
 | `coverage <input> --mapping mapping.yaml` | Summarize mapping quality across a stream and enforce quality budgets. |
 | `scorecard <input> --mapping mapping.yaml` | Grade mapping readiness with coverage, lint, and strict checks. |
+| `score <input> --mapping mapping.yaml` | Short alias for `scorecard`. |
 | `gate <input> --mapping mapping.yaml` | Run a stricter production-readiness gate with JSON or SARIF output. |
 | `validate-mapping mapping.yaml` | Check mapping syntax, transforms, and likely schema issues. |
 | `schema-drift mapping.yaml` | Compare a mapping against bundled or synced schema data. |
@@ -416,6 +452,7 @@ ocsfkit suggest sample.json --mapping-yaml > starter-mapping.yaml
 | `init-mapping <input>` | Generate a starter mapping worksheet from a representative event. |
 | `suggest <input>` | Suggest likely source-to-OCSF field mappings and optional starter YAML. |
 | `test-mapping spec.yaml` | Run fixture-based mapping regression tests. |
+| `mapping test spec.yaml` | Namespaced alias for fixture-based mapping regression tests. |
 | `test-transform spec.yaml` | Run YAML-defined tests for built-in or custom transforms. |
 | `report <input> --mapping mapping.yaml` | Write a standalone HTML mapping coverage report. |
 | `workshop <input>` | Print a guided mapping worksheet and optional explanation report. |
@@ -437,6 +474,9 @@ ocsfkit lint sample.json --github-annotations
 ocsfkit scan fixtures --sarif --warn-only
 ocsfkit coverage sample.ndjson --mapping mapping.yaml --sarif
 ocsfkit scorecard sample.ndjson --mapping mapping.yaml --sarif
+ocsfkit batch sample.ndjson --mapping mapping.yaml --output mapped.ndjson --coverage-html coverage.html
+ocsfkit describe severity_id
+ocsfkit describe 2004
 ocsfkit coverage sample.ndjson --mapping mapping.yaml --github-summary
 ocsfkit scorecard sample.ndjson --mapping mapping.yaml --markdown
 ocsfkit schema --format jsonschema > ocsfkit.schema.json
@@ -604,6 +644,7 @@ Included source fixtures cover:
 Important files:
 
 - [GuardDuty mapping](examples/guardduty-mapping.yaml)
+- [GuardDuty demo walkthrough](examples/demo/README.md)
 - [Security Hub mapping](examples/securityhub-mapping.yaml)
 - [CloudTrail console login mapping](examples/cloudtrail-console-login-mapping.yaml)
 - [AWS VPC Flow Logs mapping](examples/aws-vpc-flow-mapping.yaml)
