@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2
+
+- Removed Node 20 artifact/release actions from the release workflow.
+- Restored OpenSSF Scorecard publishing compatibility by avoiding global
+  workflow environment variables in the Scorecard workflow.
+
 ## 0.7.1
 
 - Opted GitHub Actions workflows into Node 24 execution to clear hosted-runner
