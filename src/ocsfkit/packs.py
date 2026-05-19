@@ -43,9 +43,27 @@ BUILTIN_PACKS = {
 }
 
 
+def resolve_pack_mapping(name: str) -> str:
+    aliases = _pack_aliases()
+    key = name.removesuffix(".yaml")
+    if key not in aliases:
+        available = ", ".join(sorted(aliases))
+        raise KeyError(f"Unknown mapping pack {name!r}. Available packs: {available}")
+    return _mapping_path(aliases[key])
+
+
+def load_pack_mapping(name: str) -> dict[str, Any]:
+    return load_mapping_file(resolve_pack_mapping(name))
+
+
 def list_packs() -> list[dict[str, Any]]:
     return [
-        {"name": name, "mappings": mappings, "mapping_count": len(mappings)}
+        {
+            "name": name,
+            "mappings": mappings,
+            "aliases": [_aliases_for_mapping(name, mapping) for mapping in mappings],
+            "mapping_count": len(mappings),
+        }
         for name, mappings in sorted(BUILTIN_PACKS.items())
     ]
 
@@ -66,6 +84,36 @@ def validate_pack(root: str = ".") -> list[dict[str, Any]]:
                 }
             )
     return results
+
+
+def _pack_aliases() -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for pack_name, mappings in BUILTIN_PACKS.items():
+        for mapping in mappings:
+            stem = Path(mapping).stem
+            short = stem.removesuffix("-mapping")
+            aliases[stem] = mapping
+            aliases[short] = mapping
+            aliases[f"{pack_name}-{short}"] = mapping
+            aliases[f"{pack_name}/{short}"] = mapping
+    return aliases
+
+
+def _aliases_for_mapping(pack_name: str, mapping: str) -> str:
+    short = Path(mapping).stem.removesuffix("-mapping")
+    if short == pack_name or short.startswith(f"{pack_name}-"):
+        return short
+    return f"{pack_name}-{short}"
+
+
+def _mapping_path(mapping: str) -> str:
+    repo_path = Path(mapping)
+    if repo_path.exists():
+        return str(repo_path)
+    packaged_path = Path(__file__).resolve().parent / mapping
+    if packaged_path.exists():
+        return str(packaged_path)
+    return str(repo_path)
 
 
 def _contract_issues(base: Path, mapping: str, mapping_path: str) -> list[Any]:

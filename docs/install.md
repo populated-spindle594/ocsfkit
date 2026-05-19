@@ -70,7 +70,7 @@ docker run --rm -v "$PWD:/work" -w /work ocsfkit \
 - name: Validate mapping quality
   run: |
     ocsfkit scorecard fixtures/guardduty.ndjson \
-      --mapping examples/guardduty-mapping.yaml \
+      --pack aws-guardduty \
       --min-confidence 0.80 \
       --max-unmapped 25 \
       --github-summary
@@ -83,7 +83,7 @@ Use the repo hooks directly:
 ```yaml
 repos:
   - repo: https://github.com/pfrederiksen/ocsfkit
-    rev: v0.8.0
+    rev: v0.9.0
     hooks:
       - id: ocsfkit-validate-mapping
       - id: ocsfkit-pack-validate

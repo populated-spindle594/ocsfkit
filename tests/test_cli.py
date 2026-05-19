@@ -11,6 +11,12 @@ def test_parse_smoke() -> None:
     assert "111122223333" in result.stdout
 
 
+def test_version_smoke() -> None:
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert result.stdout.strip()
+
+
 def test_lint_smoke_failure() -> None:
     result = runner.invoke(app, ["lint", "fixtures/broken_ocsf_event.json"])
     assert result.exit_code == 1
@@ -37,6 +43,20 @@ def test_map_smoke() -> None:
     assert "Detection Finding" in result.stdout
 
 
+def test_map_pack_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "map",
+            "fixtures/aws_guardduty_finding.json",
+            "--pack",
+            "aws-guardduty",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Detection Finding" in result.stdout
+
+
 def test_explain_json_smoke() -> None:
     result = runner.invoke(
         app,
@@ -50,6 +70,21 @@ def test_explain_json_smoke() -> None:
     )
     assert result.exit_code == 0
     assert "unmapped_source_fields" in result.stdout
+
+
+def test_explain_pack_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "fixtures/aws_guardduty_finding.json",
+            "--pack",
+            "guardduty",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "mapped_fields" in result.stdout
 
 
 def test_explain_github_annotations_smoke() -> None:
@@ -177,6 +212,23 @@ def test_coverage_markdown_smoke() -> None:
     assert "ocsfkit Coverage" in result.stdout
 
 
+def test_coverage_sarif_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "coverage",
+            "fixtures/aws_guardduty_finding.json",
+            "--pack",
+            "aws-guardduty",
+            "--min-confidence",
+            "1.0",
+            "--sarif",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "ocsfkit.coverage" in result.stdout
+
+
 def test_baseline_commands_smoke(tmp_path) -> None:
     baseline = tmp_path / "baseline.yaml"
     created = runner.invoke(
@@ -227,6 +279,43 @@ def test_scorecard_smoke() -> None:
     assert '"grade": "C"' in result.stdout
 
 
+def test_scorecard_sarif_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "scorecard",
+            "fixtures/guardduty.ndjson",
+            "--pack",
+            "guardduty",
+            "--min-confidence",
+            "1.0",
+            "--sarif",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "ocsfkit.scorecard" in result.stdout
+
+
+def test_gate_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "gate",
+            "fixtures/guardduty.ndjson",
+            "--pack",
+            "aws-guardduty",
+            "--min-confidence",
+            "0.7",
+            "--max-unmapped",
+            "100",
+            "--no-strict",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    assert '"passed": true' in result.stdout
+
+
 def test_validate_mapping_smoke() -> None:
     result = runner.invoke(app, ["validate-mapping", "examples/guardduty-mapping.yaml"])
     assert result.exit_code == 0
@@ -242,6 +331,14 @@ def test_schema_smoke() -> None:
     result = runner.invoke(app, ["schema"])
     assert result.exit_code == 0
     assert "Detection Finding" in result.stdout
+
+
+def test_schema_jsonschema_smoke() -> None:
+    result = runner.invoke(app, ["schema", "--format", "jsonschema"])
+    assert result.exit_code == 0
+    assert '"$schema": "https://json-schema.org/draft/2020-12/schema"' in result.stdout
+    assert '"resources": {' in result.stdout
+    assert '"type": "array"' in result.stdout
 
 
 def test_test_mapping_smoke() -> None:
@@ -359,6 +456,7 @@ def test_pack_commands_smoke() -> None:
     listed = runner.invoke(app, ["pack", "list"])
     assert listed.exit_code == 0
     assert "aws" in listed.stdout
+    assert "aws-guardduty" in listed.stdout
 
     validated = runner.invoke(app, ["pack", "validate", "--json"])
     assert validated.exit_code == 0

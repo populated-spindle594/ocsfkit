@@ -36,6 +36,13 @@ ocsfkit map fixtures/aws_guardduty_finding.json \
   --mapping examples/guardduty-mapping.yaml
 ```
 
+Built-in mapping packs are available in installed releases. For GuardDuty, the
+equivalent shortcut is:
+
+```bash
+ocsfkit map fixtures/aws_guardduty_finding.json --pack aws-guardduty
+```
+
 Expected high-value fields in the output include:
 
 ```json
@@ -63,6 +70,8 @@ The explain command is the main workbench view:
 ocsfkit explain fixtures/aws_guardduty_finding.json \
   --mapping examples/guardduty-mapping.yaml
 ```
+
+You can use `--pack aws-guardduty` with `explain` as well.
 
 Use JSON for automation or CI:
 
@@ -158,9 +167,18 @@ ocsfkit coverage fixtures/guardduty.ndjson \
 
 The command exits non-zero when a budget fails. JSON mode includes
 `threshold_failures` so CI logs and dashboards can explain the failure.
+SARIF mode can publish threshold failures into code scanning:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --sarif > ocsfkit-coverage.sarif
+```
 
 For a single production-readiness gate that combines coverage, lint, and
-strict-mode checks, use `scorecard`:
+strict-mode checks, use `scorecard` or the stricter `gate` shortcut:
 
 ```bash
 ocsfkit scorecard fixtures/guardduty.ndjson \
@@ -168,6 +186,13 @@ ocsfkit scorecard fixtures/guardduty.ndjson \
   --min-confidence 0.80 \
   --max-unmapped 25 \
   --github-summary
+
+ocsfkit gate fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --min-confidence 0.70 \
+  --max-unmapped 10 \
+  --no-strict \
+  --sarif > ocsfkit-gate.sarif
 ```
 
 For review meetings or tickets, generate a standalone HTML report:
@@ -286,6 +311,12 @@ The bundled schema slice can be inspected directly:
 ocsfkit schema --schema-version 1.7.0
 ```
 
+For editor integrations or external validators, export JSON Schema:
+
+```bash
+ocsfkit schema --schema-version 1.7.0 --format jsonschema > ocsfkit.schema.json
+```
+
 If you have a JSON/YAML export from an upstream schema source, normalize it into
 the small registry shape used by `ocsfkit`:
 
@@ -308,6 +339,13 @@ Review the included mapping packs:
 ```bash
 ocsfkit pack list
 ocsfkit pack validate
+```
+
+Pack aliases work directly with mapping-quality commands:
+
+```bash
+ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
+ocsfkit scorecard fixtures/guardduty.ndjson --pack aws-guardduty --max-unmapped 25
 ```
 
 Generate the mapping catalog and check for schema drift:

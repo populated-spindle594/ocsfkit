@@ -4,6 +4,7 @@ from typing import Any
 
 from ocsfkit.models import LintIssue, MappingExplanation
 from ocsfkit.privacy import Finding
+from ocsfkit.scorecard import ScorecardReport
 
 
 def lint_issues_to_sarif(issues_by_event: list[list[LintIssue]], source_uri: str) -> dict[str, Any]:
@@ -76,6 +77,29 @@ def privacy_findings_to_sarif(findings: list[Finding], source_uri: str) -> dict[
             for finding in findings
         ]
     )
+
+
+def quality_failures_to_sarif(
+    failures: list[str],
+    source_uri: str,
+    category: str = "ocsfkit.quality",
+) -> dict[str, Any]:
+    return _sarif(
+        [
+            {
+                "ruleId": f"{category}.{index}",
+                "level": "error",
+                "message": {"text": failure},
+                "locations": [_location(source_uri, 1, category)],
+            }
+            for index, failure in enumerate(failures, start=1)
+        ]
+    )
+
+
+def scorecard_to_sarif(report: ScorecardReport, source_uri: str) -> dict[str, Any]:
+    failures = report.failures or ([] if report.passed else [f"Scorecard grade {report.grade}"])
+    return quality_failures_to_sarif(failures, source_uri, "ocsfkit.scorecard")
 
 
 def lint_issues_to_github_annotations(

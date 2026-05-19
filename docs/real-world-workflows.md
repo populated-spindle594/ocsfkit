@@ -196,7 +196,7 @@ Or emit native workflow annotations:
 ```bash
 ocsfkit lint /tmp/mapped.ndjson --github-annotations
 ocsfkit explain fixtures/aws_guardduty_finding.json \
-  --mapping examples/guardduty-mapping.yaml \
+  --pack aws-guardduty \
   --github-annotations
 ```
 
@@ -204,7 +204,7 @@ Add a coverage budget when a mapping is mature enough to protect:
 
 ```bash
 ocsfkit coverage fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
+  --pack aws-guardduty \
   --min-confidence 0.80 \
   --max-unmapped 25
 ```
@@ -214,17 +214,29 @@ lint, coverage, and optional strict checks:
 
 ```bash
 ocsfkit scorecard fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
+  --pack aws-guardduty \
   --min-confidence 0.80 \
   --max-unmapped 25 \
   --strict
+```
+
+Use `gate` when CI should produce a SARIF artifact and fail on strict
+production-readiness defaults:
+
+```bash
+ocsfkit gate fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --min-confidence 0.70 \
+  --max-unmapped 10 \
+  --no-strict \
+  --sarif > ocsfkit-gate.sarif
 ```
 
 Append the same review to a GitHub Actions job summary:
 
 ```bash
 ocsfkit coverage fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
+  --pack aws-guardduty \
   --min-confidence 0.80 \
   --max-unmapped 25 \
   --github-summary
@@ -299,7 +311,7 @@ The faster terminal workflow is:
 
 ```bash
 ocsfkit coverage fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml
+  --pack aws-guardduty
 ```
 
 For a new source, start with:

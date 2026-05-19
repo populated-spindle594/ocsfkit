@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0
+
+- Added `ocsfkit --version`.
+- Added built-in mapping-pack aliases through `--pack` on mapping-quality
+  commands, with packaged example mappings available from installed wheels.
+- Added `ocsfkit gate` as a strict CI-oriented readiness gate with JSON and
+  SARIF output.
+- Added SARIF output for `coverage` and `scorecard`.
+- Added JSON Schema export through `ocsfkit schema --format jsonschema`.
+- Added streaming NDJSON mapping for `ocsfkit map --format ndjson`.
+- Removed PyPI token fallback from the release workflow so releases use Trusted
+  Publishing only.
+- Added deterministic Homebrew tap updates that hash the GitHub release
+  archive before committing formula changes.
+
 ## 0.8.0
 
 - Added semantic mapping diffs through `ocsfkit diff-mapping`.

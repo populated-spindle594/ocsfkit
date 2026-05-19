@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ocsfkit"
-version = "0.8.0"
+version = "0.9.0"
 description = "An OCSF workbench for normalizing, linting, explaining, diffing, and querying security events."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -49,6 +49,9 @@ Issues = "https://github.com/pfrederiksen/ocsfkit/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ocsfkit"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"examples" = "src/ocsfkit/examples"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

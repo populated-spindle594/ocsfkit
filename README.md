@@ -77,6 +77,14 @@ ocsfkit map fixtures/aws_guardduty_finding.json \
   --mapping examples/guardduty-mapping.yaml
 ```
 
+Installed releases include built-in mapping packs, so common sources can be
+mapped without locating an example YAML file:
+
+```bash
+ocsfkit map fixtures/aws_guardduty_finding.json --pack aws-guardduty
+ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
+```
+
 Explain whether that mapping is good enough to trust:
 
 ```bash
@@ -92,6 +100,13 @@ ocsfkit scorecard fixtures/guardduty.ndjson \
   --min-confidence 0.70 \
   --max-unmapped 10 \
   --github-summary
+
+ocsfkit gate fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --min-confidence 0.70 \
+  --max-unmapped 10 \
+  --no-strict \
+  --sarif > ocsfkit-gate.sarif
 ```
 
 Lint OCSF-looking events:
@@ -308,6 +323,12 @@ ocsfkit coverage fixtures/guardduty.ndjson \
   --max-unmapped 25 \
   --github-summary
 
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --sarif > ocsfkit-coverage.sarif
+
 ocsfkit scorecard fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \
   --min-confidence 0.80 \
@@ -347,6 +368,12 @@ ocsfkit pack validate
 
 Use target discovery and mapping packs when building mappings for common source
 families such as AWS, identity, network, detections, and infrastructure.
+Pack aliases can be passed to commands that accept mappings:
+
+```bash
+ocsfkit map sample.json --pack aws-guardduty --format ndjson
+ocsfkit gate sample.ndjson --pack aws-guardduty --no-strict --sarif > ocsfkit-gate.sarif
+```
 
 ## Command Reference
 
@@ -361,6 +388,7 @@ families such as AWS, identity, network, detections, and infrastructure.
 | `query <input> <path>` | Extract common OCSF fields with dotted paths. |
 | `coverage <input> --mapping mapping.yaml` | Summarize mapping quality across a stream and enforce quality budgets. |
 | `scorecard <input> --mapping mapping.yaml` | Grade mapping readiness with coverage, lint, and strict checks. |
+| `gate <input> --mapping mapping.yaml` | Run a stricter production-readiness gate with JSON or SARIF output. |
 | `validate-mapping mapping.yaml` | Check mapping syntax, transforms, and likely schema issues. |
 | `schema-drift mapping.yaml` | Compare a mapping against bundled or synced schema data. |
 | `scan <input>` | Find likely secrets and sensitive identifiers in fixtures or reports. |
@@ -382,13 +410,17 @@ families such as AWS, identity, network, detections, and infrastructure.
 Useful output modes:
 
 ```bash
+ocsfkit --version
 ocsfkit explain sample.json --mapping mapping.yaml --json
 ocsfkit explain sample.json --mapping mapping.yaml --markdown
 ocsfkit explain sample.json --mapping mapping.yaml --html --output explanation.html
 ocsfkit lint sample.json --github-annotations
 ocsfkit scan fixtures --sarif --warn-only
+ocsfkit coverage sample.ndjson --mapping mapping.yaml --sarif
+ocsfkit scorecard sample.ndjson --mapping mapping.yaml --sarif
 ocsfkit coverage sample.ndjson --mapping mapping.yaml --github-summary
 ocsfkit scorecard sample.ndjson --mapping mapping.yaml --markdown
+ocsfkit schema --format jsonschema > ocsfkit.schema.json
 ocsfkit catalog --output docs/mapping-catalog.md
 ocsfkit test-mapping tests/goldens --junit mapping-tests.xml
 ```
@@ -515,7 +547,8 @@ Common fields include:
   `status_id`
 
 Schema-version awareness currently supports `1.6.0` and `1.7.0`, with `1.7.0`
-as the default expected version.
+as the default expected version. Use `ocsfkit schema --format jsonschema` to
+export a JSON Schema for editors and external validators.
 
 ## Fixtures and Examples
 
@@ -570,7 +603,6 @@ More workflow documentation:
 - [Mapping Guide](docs/mapping-guide.md)
 - [Mapping Catalog](docs/mapping-catalog.md)
 - [Real-World Workflows](docs/real-world-workflows.md)
-- [Static Docs Site](docs/site/index.html)
 
 ## Production Use
 
@@ -579,7 +611,7 @@ More workflow documentation:
 - `Dockerfile` for containerized CI or build-agent usage.
 - `.github/workflows/docker.yml` for GHCR image builds on pushes and tagged releases.
 - `.pre-commit-hooks.yaml` for validating mappings before commit.
-- `ocsfkit scorecard` for a single pass/fail readiness gate.
+- `ocsfkit scorecard` and `ocsfkit gate` for pass/fail readiness gates.
 - `ocsfkit catalog` for generated mapping documentation.
 - `ocsfkit schema-drift` for checking mappings against bundled or synced schema data.
 - `ocsfkit scan`, `ocsfkit redact`, and SARIF output for fixture hygiene and
@@ -610,14 +642,14 @@ ocsfkit = "ocsfkit.cli:app"
 
 The repository is configured for normal Python and Homebrew releases:
 
-1. Tag a version, for example `git tag v0.8.0 && git push --tags`.
+1. Tag a version, for example `git tag v0.9.0 && git push --tags`.
 2. `.github/workflows/release.yml` builds source and wheel distributions.
-3. PyPI publishing uses Trusted Publishing when configured, with
-   `PYPI_API_TOKEN` as a fallback.
+3. PyPI publishing uses Trusted Publishing.
 4. Homebrew tap updates run when `HOMEBREW_TAP_ENABLED=true` is set and
-   `HOMEBREW_TAP_TOKEN` is available.
+   `HOMEBREW_TAP_TOKEN` is available. The release workflow hashes the GitHub
+   release archive before committing the formula update.
 5. GitHub Actions are pinned to commit SHAs.
 6. Release artifacts get GitHub provenance attestations.
 
-Do not commit package index tokens. Use PyPI Trusted Publishing or repository
-secrets for release automation.
+Do not commit package index tokens. Use PyPI Trusted Publishing and scoped
+repository secrets for release automation.

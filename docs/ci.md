@@ -19,10 +19,18 @@ jobs:
       - name: Score GuardDuty mapping
         run: |
           ocsfkit scorecard fixtures/guardduty.ndjson \
-            --mapping examples/guardduty-mapping.yaml \
+            --pack aws-guardduty \
             --min-confidence 0.80 \
             --max-unmapped 25 \
             --github-summary
+      - name: Publish mapping-quality SARIF
+        run: |
+          ocsfkit gate fixtures/guardduty.ndjson \
+            --pack aws-guardduty \
+            --min-confidence 0.70 \
+            --max-unmapped 10 \
+            --no-strict \
+            --sarif > ocsfkit-gate.sarif
       - name: Write mapping test report
         run: ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
       - name: Scan fixtures for sensitive data
@@ -41,7 +49,7 @@ ocsfkit:
     - ocsfkit pack validate
     - ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
     - ocsfkit scan fixtures --warn-only
-    - ocsfkit scorecard fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --min-confidence 0.80 --max-unmapped 25
+    - ocsfkit scorecard fixtures/guardduty.ndjson --pack aws-guardduty --min-confidence 0.80 --max-unmapped 25
   artifacts:
     reports:
       junit: ocsfkit-mapping.xml
@@ -70,6 +78,7 @@ ocsfkit:
 	ocsfkit scan fixtures --warn-only
 	ocsfkit doctor
 	ocsfkit benchmark fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --iterations 3
+	ocsfkit gate fixtures/guardduty.ndjson --pack aws-guardduty --min-confidence 0.70 --max-unmapped 10 --no-strict --sarif > ocsfkit-gate.sarif
 ```
 
 ## Docker
@@ -77,7 +86,7 @@ ocsfkit:
 ```bash
 docker run --rm -v "$PWD:/work" -w /work ghcr.io/pfrederiksen/ocsfkit:latest \
   scorecard fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
+  --pack aws-guardduty \
   --min-confidence 0.80 \
   --max-unmapped 25
 ```

@@ -15,10 +15,9 @@ Use it to answer practical review questions:
 
 ```bash
 pip install ocsfkit
-ocsfkit explain fixtures/aws_guardduty_finding.json \
-  --mapping examples/guardduty-mapping.yaml
+ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
 ocsfkit scorecard fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
+  --pack aws-guardduty \
   --min-confidence 0.80 \
   --max-unmapped 25
 ```
@@ -29,6 +28,8 @@ ocsfkit scorecard fixtures/guardduty.ndjson \
 ocsfkit validate-mapping examples/guardduty-mapping.yaml --strict
 ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
 ocsfkit scan fixtures --sarif --warn-only > ocsfkit-privacy.sarif
+ocsfkit gate fixtures/guardduty.ndjson --pack aws-guardduty --min-confidence 0.70 --max-unmapped 10 --no-strict --sarif > ocsfkit-gate.sarif
+ocsfkit schema --format jsonschema > ocsfkit.schema.json
 ocsfkit doctor
 ```
 

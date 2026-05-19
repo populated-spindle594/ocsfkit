@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 import yaml
 
+from ocsfkit import __version__
 from ocsfkit.baseline import check_baseline, create_baseline
 from ocsfkit.benchmark import benchmark_mapping
 from ocsfkit.catalog import catalog_markdown, mapping_catalog
@@ -16,6 +17,8 @@ from ocsfkit.ci import (
     lint_issues_to_github_annotations,
     lint_issues_to_sarif,
     privacy_findings_to_sarif,
+    quality_failures_to_sarif,
+    scorecard_to_sarif,
 )
 from ocsfkit.coverage import enforce_coverage_thresholds, mapping_coverage
 from ocsfkit.diff import diff_events
@@ -28,7 +31,7 @@ from ocsfkit.mapping import apply_mapping
 from ocsfkit.mapping_diff import diff_mappings
 from ocsfkit.mapping_test import run_mapping_tests
 from ocsfkit.models import DiffChange
-from ocsfkit.packs import list_packs, validate_pack
+from ocsfkit.packs import list_packs, resolve_pack_mapping, validate_pack
 from ocsfkit.paths import flatten_paths, query_field
 from ocsfkit.privacy import scan_events
 from ocsfkit.redact import redact_value
@@ -42,7 +45,7 @@ from ocsfkit.render import (
     render_lint,
 )
 from ocsfkit.report import coverage_html, explanation_html
-from ocsfkit.schema import bundled_schema
+from ocsfkit.schema import bundled_json_schema, bundled_schema
 from ocsfkit.schema_import import import_schema
 from ocsfkit.schema_sync import sync_schema
 from ocsfkit.scorecard import mapping_scorecard, scorecard_markdown
@@ -54,6 +57,7 @@ from ocsfkit.validation import validate_mapping_doc
 
 app = typer.Typer(
     no_args_is_help=True,
+    invoke_without_command=True,
     help=(
         "OCSF workbench for normalizing, linting, explaining, diffing, "
         "and querying security events."
@@ -68,6 +72,22 @@ app.add_typer(baseline_app, name="baseline")
 
 
 OutputFormat = Annotated[str, typer.Option("--format", help="Output format: json or ndjson")]
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            help="Show ocsfkit version and exit",
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
+    if version:
+        console.print(__version__)
+        raise typer.Exit()
 
 
 @app.command()
@@ -126,7 +146,13 @@ def map(  # noqa: A001
     input: Annotated[
         str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or - for stdin")
     ],
-    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Mapping YAML path")
+    ] = None,
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Built-in mapping pack alias, e.g. aws-guardduty"),
+    ] = None,
     explain: Annotated[
         bool, typer.Option("--explain", help="Include explanation metadata")
     ] = False,
@@ -146,10 +172,18 @@ def map(  # noqa: A001
 
     def command() -> None:
         _validate_format(format)
-        mapping_doc = load_mapping_file(mapping)
+        mapping_path = _resolve_mapping_path(mapping, pack)
+        mapping_doc = load_mapping_file(mapping_path)
         custom_transforms = _custom_transforms_for_mapping(
-            mapping_doc, mapping, allow_unsafe_transforms or not strict
+            mapping_doc, mapping_path, allow_unsafe_transforms or not strict
         )
+        if format == "ndjson" and not explain and not strict:
+            import json
+
+            for event in iter_events(input):
+                result = apply_mapping(event, mapping_doc, custom_transforms)
+                console.file.write(json.dumps(result.event, sort_keys=True, default=str) + "\n")
+            return
         results = [
             apply_mapping(event, mapping_doc, custom_transforms) for event in iter_events(input)
         ]
@@ -172,7 +206,13 @@ def explain(
     input: Annotated[
         str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or - for stdin")
     ],
-    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Mapping YAML path")
+    ] = None,
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Built-in mapping pack alias, e.g. aws-guardduty"),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
     github_annotations: Annotated[
         bool, typer.Option("--github-annotations", help="Emit GitHub workflow annotations")
@@ -197,9 +237,10 @@ def explain(
     """Explain mapping decisions, data loss, missing targets, and confidence."""
 
     def command() -> None:
-        mapping_doc = load_mapping_file(mapping)
+        mapping_path = _resolve_mapping_path(mapping, pack)
+        mapping_doc = load_mapping_file(mapping_path)
         custom_transforms = _custom_transforms_for_mapping(
-            mapping_doc, mapping, allow_unsafe_transforms or not strict
+            mapping_doc, mapping_path, allow_unsafe_transforms or not strict
         )
         results = [
             apply_mapping(event, mapping_doc, custom_transforms) for event in iter_events(input)
@@ -310,8 +351,15 @@ def query(
 @app.command("scorecard")
 def scorecard_command(
     input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
-    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Mapping YAML path")
+    ] = None,
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Built-in mapping pack alias, e.g. aws-guardduty"),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    sarif: Annotated[bool, typer.Option("--sarif", help="Emit SARIF JSON for CI")] = False,
     markdown: Annotated[bool, typer.Option("--markdown", help="Emit Markdown")] = False,
     github_summary: Annotated[
         bool, typer.Option("--github-summary", help="Append Markdown to GITHUB_STEP_SUMMARY")
@@ -338,9 +386,10 @@ def scorecard_command(
     """Grade mapping production readiness with coverage, lint, and strict checks."""
 
     def command() -> None:
-        mapping_doc = load_mapping_file(mapping)
+        mapping_path = _resolve_mapping_path(mapping, pack)
+        mapping_doc = load_mapping_file(mapping_path)
         custom_transforms = _custom_transforms_for_mapping(
-            mapping_doc, mapping, allow_unsafe_transforms or not strict
+            mapping_doc, mapping_path, allow_unsafe_transforms or not strict
         )
         report = mapping_scorecard(
             iter_events(input),
@@ -351,7 +400,9 @@ def scorecard_command(
             max_lint_errors=max_lint_errors,
             strict=strict,
         )
-        if json_output:
+        if sarif:
+            print_json(scorecard_to_sarif(report, input))
+        elif json_output:
             print_json(report.model_dump())
         elif markdown or github_summary:
             text = scorecard_markdown(report)
@@ -387,8 +438,15 @@ def coverage_command(
     input: Annotated[
         str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or - for stdin")
     ],
-    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Mapping YAML path")
+    ] = None,
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Built-in mapping pack alias, e.g. aws-guardduty"),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    sarif: Annotated[bool, typer.Option("--sarif", help="Emit SARIF JSON for CI")] = False,
     min_confidence: Annotated[
         float | None, typer.Option("--min-confidence", help="Fail below this average confidence")
     ] = None,
@@ -416,9 +474,10 @@ def coverage_command(
     """Report mapping coverage across an event stream."""
 
     def command() -> None:
-        mapping_doc = load_mapping_file(mapping)
+        mapping_path = _resolve_mapping_path(mapping, pack)
+        mapping_doc = load_mapping_file(mapping_path)
         custom_transforms = _custom_transforms_for_mapping(
-            mapping_doc, mapping, allow_unsafe_transforms or not strict
+            mapping_doc, mapping_path, allow_unsafe_transforms or not strict
         )
         events = list(iter_events(input))
         report = mapping_coverage(events, mapping_doc, custom_transforms)
@@ -432,6 +491,11 @@ def coverage_command(
                     )
                 )
             failures.extend(strict_failures)
+        if sarif:
+            print_json(quality_failures_to_sarif(failures, input, "ocsfkit.coverage"))
+            if failures:
+                raise typer.Exit(1)
+            return
         if markdown or github_summary:
             text = coverage_markdown(report, failures)
             if github_summary:
@@ -462,6 +526,69 @@ def coverage_command(
         for failure in failures:
             console.print(f"[red]{failure}[/red]")
         if failures:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("gate")
+def gate_command(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    mapping: Annotated[
+        str | None, typer.Option("--mapping", "-m", help="Mapping YAML path")
+    ] = None,
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Built-in mapping pack alias, e.g. aws-guardduty"),
+    ] = None,
+    min_confidence: Annotated[
+        float, typer.Option("--min-confidence", help="Fail below this average confidence")
+    ] = 0.85,
+    max_unmapped: Annotated[
+        int, typer.Option("--max-unmapped", help="Fail above this unmapped source field count")
+    ] = 0,
+    max_lint_errors: Annotated[
+        int, typer.Option("--max-lint-errors", help="Fail above this mapped-event lint error count")
+    ] = 0,
+    strict: Annotated[
+        bool,
+        typer.Option("--strict/--no-strict", help="Fail on guessed, missing, or unmapped fields"),
+    ] = True,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    sarif: Annotated[bool, typer.Option("--sarif", help="Emit SARIF JSON for CI")] = False,
+    allow_unsafe_transforms: Annotated[
+        bool, typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files")
+    ] = False,
+) -> None:
+    """Run a strict production mapping-quality gate for CI."""
+
+    def command() -> None:
+        mapping_path = _resolve_mapping_path(mapping, pack)
+        mapping_doc = load_mapping_file(mapping_path)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping_path, allow_unsafe_transforms or not strict
+        )
+        report = mapping_scorecard(
+            iter_events(input),
+            mapping_doc,
+            custom_transforms,
+            min_confidence=min_confidence,
+            max_unmapped=max_unmapped,
+            max_lint_errors=max_lint_errors,
+            strict=strict,
+        )
+        if sarif:
+            print_json(scorecard_to_sarif(report, input))
+        elif json_output:
+            print_json(report.model_dump())
+        else:
+            console.print(f"[bold]Gate:[/bold] {'passed' if report.passed else 'failed'}")
+            console.print(f"[bold]Grade:[/bold] {report.grade}")
+            console.print(f"[bold]Average confidence:[/bold] {report.average_confidence:.3f}")
+            console.print(f"[bold]Source field coverage:[/bold] {report.source_field_coverage:.3f}")
+            for failure in report.failures:
+                console.print(f"[red]{failure}[/red]")
+        if not report.passed:
             raise typer.Exit(1)
 
     _run(command)
@@ -529,9 +656,21 @@ def schema_command(
     version: Annotated[
         str, typer.Option("--schema-version", help="Bundled schema version")
     ] = DEFAULT_SCHEMA_VERSION,
+    format: Annotated[
+        str, typer.Option("--format", help="Schema output format: registry or jsonschema")
+    ] = "registry",
 ) -> None:
     """Emit the bundled minimal OCSF schema registry as JSON."""
-    _run(lambda: print_json(bundled_schema(version)))
+
+    def command() -> None:
+        if format == "registry":
+            print_json(bundled_schema(version))
+        elif format == "jsonschema":
+            print_json(bundled_json_schema(version))
+        else:
+            raise OCSFKitError("--format must be one of: registry, jsonschema")
+
+    _run(command)
 
 
 @app.command("import-schema")
@@ -897,8 +1036,8 @@ def pack_list(
             return
         for pack in packs:
             console.print(f"[bold]{pack['name']}[/bold] ({pack['mapping_count']} mappings)")
-            for mapping in pack["mappings"]:
-                console.print(f"  {mapping}")
+            for mapping, alias in zip(pack["mappings"], pack["aliases"], strict=True):
+                console.print(f"  {alias}: {mapping}")
 
     _run(command)
 
@@ -989,6 +1128,19 @@ def baseline_check(
 def _validate_format(format_name: str) -> None:
     if format_name not in {"json", "ndjson"}:
         raise OCSFKitError("--format must be one of: json, ndjson")
+
+
+def _resolve_mapping_path(mapping: str | None, pack: str | None) -> str:
+    if mapping and pack:
+        raise OCSFKitError("Use either --mapping or --pack, not both")
+    if mapping:
+        return mapping
+    if pack:
+        try:
+            return resolve_pack_mapping(pack)
+        except KeyError as exc:
+            raise OCSFKitError(str(exc)) from exc
+    raise OCSFKitError("A mapping is required. Use --mapping PATH or --pack NAME")
 
 
 def _custom_transforms_for_mapping(

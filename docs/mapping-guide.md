@@ -300,6 +300,22 @@ ocsfkit coverage fixtures/guardduty.ndjson \
   --github-summary
 ```
 
+Use SARIF when coverage or scorecard failures should appear in code scanning:
+
+```bash
+ocsfkit coverage fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --sarif > ocsfkit-coverage.sarif
+
+ocsfkit scorecard fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --min-confidence 0.80 \
+  --max-unmapped 25 \
+  --sarif > ocsfkit-scorecard.sarif
+```
+
 Strict mode turns explanation uncertainty into failures:
 
 ```bash
@@ -346,10 +362,23 @@ Built-in packs group included examples by source family:
 ```bash
 ocsfkit pack list
 ocsfkit pack validate
+ocsfkit map fixtures/aws_guardduty_finding.json --pack aws-guardduty
+ocsfkit explain fixtures/aws_guardduty_finding.json --pack guardduty
 ```
 
-Today the packs are bundled examples. The command shape leaves room for external
-pack install/update support later without changing mapping files.
+Packs are included in installed wheels, so CI jobs can use aliases without
+checking out the repository's `examples/` directory. Use the aliases printed by
+`pack list`, such as `aws-guardduty`, `identity-okta-authentication`, or
+`network-zeek-conn`.
+
+Once a mapping has no unexpected unmapped fields, use a strict production gate:
+
+```bash
+ocsfkit gate fixtures/guardduty.ndjson \
+  --pack aws-guardduty \
+  --min-confidence 0.85 \
+  --max-unmapped 0
+```
 
 ## Dropping Source Fields
 
