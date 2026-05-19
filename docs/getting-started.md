@@ -9,6 +9,8 @@ Start by confirming that the input loader understands the file:
 
 ```bash
 ocsfkit parse fixtures/aws_guardduty_finding.json
+ocsfkit inspect fixtures/aws_guardduty_finding.json
+ocsfkit path fixtures/aws_guardduty_finding.json '$.resource.instanceDetails.instanceId'
 ```
 
 For log streams, use NDJSON:
@@ -393,5 +395,7 @@ ocsfkit schema-drift examples/guardduty-mapping.yaml
 Custom transform behavior can be tested with YAML cases:
 
 ```bash
+ocsfkit transforms list
+ocsfkit transforms show parse_timestamp
 ocsfkit test-transform tests/fixtures/transform-test.yaml
 ```

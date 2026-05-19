@@ -70,6 +70,14 @@ ocsfkit parse fixtures/guardduty.ndjson --format ndjson
 cat fixtures/aws_guardduty_finding.json | ocsfkit parse -
 ```
 
+Profile a source event before writing a mapping:
+
+```bash
+ocsfkit inspect fixtures/aws_guardduty_finding.json
+ocsfkit path fixtures/aws_guardduty_finding.json '$.resource.instanceDetails.instanceId'
+ocsfkit transforms list
+```
+
 Map a GuardDuty finding into an OCSF Detection Finding:
 
 ```bash
@@ -404,6 +412,7 @@ ocsfkit pack install https://github.com/acme/ocsfkit-packs/archive/refs/tags/v1.
   --name acme
 ocsfkit map sample.json --pack acme/guardduty
 ocsfkit pack update acme
+ocsfkit pack uninstall acme
 ```
 
 Start a new mapping with suggestions from a representative event:
@@ -430,6 +439,8 @@ Use the reusable GitHub Action when you want a concise mapping-quality gate:
 | Command | Purpose |
 | --- | --- |
 | `parse <input>` | Load JSON, YAML, NDJSON, or stdin and emit normalized JSON. |
+| `inspect <input>` | Profile source event paths, types, counts, and example values. |
+| `path <input> <jsonpath>` | Evaluate the supported JSONPath subset against source events. |
 | `map <input> --mapping mapping.yaml` | Apply a mapping and emit OCSF JSON. |
 | `explain <input> --mapping mapping.yaml` | Show mapping decisions, dropped fields, unmapped fields, missing targets, and confidence. |
 | `lint <input>` | Validate OCSF-looking events against the bundled registry. |
@@ -454,19 +465,22 @@ Use the reusable GitHub Action when you want a concise mapping-quality gate:
 | `test-mapping spec.yaml` | Run fixture-based mapping regression tests. |
 | `mapping test spec.yaml` | Namespaced alias for fixture-based mapping regression tests. |
 | `test-transform spec.yaml` | Run YAML-defined tests for built-in or custom transforms. |
+| `transforms list/show` | Discover available built-in, vendor-pack, and entry-point transforms. |
 | `report <input> --mapping mapping.yaml` | Write a standalone HTML mapping coverage report. |
 | `workshop <input>` | Print a guided mapping worksheet and optional explanation report. |
 | `schema` | Print the bundled minimal OCSF registry. |
 | `import-schema <path>` | Convert upstream-style schema files into the compact registry format. |
 | `sync-schema --output schema.json` | Download upstream OCSF schema data and import it. |
 | `targets list/search/show` | Discover known OCSF target fields. |
-| `pack list/validate/install/update` | Inspect, validate, install, and update mapping packs. |
+| `pack list/validate/install/update/uninstall` | Inspect, validate, install, update, and remove mapping packs. |
 | `completions bash\|zsh\|fish` | Print shell completion setup. |
 
 Useful output modes:
 
 ```bash
 ocsfkit --version
+ocsfkit inspect sample.json --json
+ocsfkit path sample.json '$.items[0].name' --json
 ocsfkit explain sample.json --mapping mapping.yaml --json
 ocsfkit explain sample.json --mapping mapping.yaml --markdown
 ocsfkit explain sample.json --mapping mapping.yaml --html --output explanation.html
@@ -483,6 +497,7 @@ ocsfkit schema --format jsonschema > ocsfkit.schema.json
 ocsfkit catalog --output docs/mapping-catalog.md
 ocsfkit test-mapping tests/goldens --junit mapping-tests.xml
 ocsfkit completions zsh
+ocsfkit transforms show parse_timestamp
 ```
 
 Strict mode is available on mapping-quality commands:

@@ -8,6 +8,8 @@ produce review artifacts.
 
 ```bash
 ocsfkit parse fixtures/aws_guardduty_finding.json
+ocsfkit inspect fixtures/aws_guardduty_finding.json
+ocsfkit path fixtures/aws_guardduty_finding.json '$.severity'
 ocsfkit map fixtures/aws_guardduty_finding.json --pack aws-guardduty
 ```
 

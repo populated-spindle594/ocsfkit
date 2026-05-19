@@ -29,7 +29,8 @@ from ocsfkit.diff import diff_events
 from ocsfkit.doctor import run_doctor
 from ocsfkit.drift import mapping_schema_drift
 from ocsfkit.errors import OCSFKitError, QueryError
-from ocsfkit.external_packs import install_pack, update_pack
+from ocsfkit.external_packs import install_pack, uninstall_pack, update_pack
+from ocsfkit.inspect import inspect_events
 from ocsfkit.io import iter_events, load_events, load_mapping_file
 from ocsfkit.junit import mapping_results_to_junit
 from ocsfkit.mapping import apply_mapping
@@ -37,7 +38,7 @@ from ocsfkit.mapping_diff import diff_mappings
 from ocsfkit.mapping_test import run_mapping_tests
 from ocsfkit.models import DiffChange
 from ocsfkit.packs import list_packs, resolve_pack_mapping, validate_pack
-from ocsfkit.paths import flatten_paths, query_field
+from ocsfkit.paths import extract_json_path, flatten_paths, query_field
 from ocsfkit.privacy import scan_events
 from ocsfkit.redact import redact_value
 from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
@@ -59,6 +60,7 @@ from ocsfkit.suggest import suggest_mappings, suggestions_mapping_yaml
 from ocsfkit.summary import coverage_markdown, explanation_markdown
 from ocsfkit.targets import list_targets, search_targets, show_target
 from ocsfkit.transform_test import run_transform_tests
+from ocsfkit.transforms import available_transforms
 from ocsfkit.validation import validate_mapping_doc
 
 app = typer.Typer(
@@ -73,10 +75,12 @@ targets_app = typer.Typer(help="Search and inspect bundled OCSF target fields.")
 packs_app = typer.Typer(help="List and validate built-in mapping packs.")
 baseline_app = typer.Typer(help="Create and check approved mapping-quality baselines.")
 mapping_app = typer.Typer(help="Validate and regression-test mapping files.")
+transforms_app = typer.Typer(help="Discover built-in, vendor, and custom transforms.")
 app.add_typer(targets_app, name="targets")
 app.add_typer(packs_app, name="pack")
 app.add_typer(baseline_app, name="baseline")
 app.add_typer(mapping_app, name="mapping")
+app.add_typer(transforms_app, name="transforms")
 
 
 OutputFormat = Annotated[str, typer.Option("--format", help="Output format: json or ndjson")]
@@ -352,6 +356,64 @@ def query(
                 console.print("null")
             else:
                 console.print(value)
+
+    _run(command)
+
+
+@app.command("path")
+def path_command(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    expression: Annotated[str, typer.Argument(help="JSONPath subset expression, e.g. $.a.b[0]")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Evaluate a source JSONPath expression against events."""
+
+    def command() -> None:
+        values = [extract_json_path(event, expression) for event in load_events(input)]
+        if json_output:
+            print_json(values[0] if len(values) == 1 else values)
+            return
+        for value in values:
+            if isinstance(value, dict | list):
+                print_json(value)
+            elif value is None:
+                console.print("null")
+            else:
+                console.print(value)
+
+    _run(command)
+
+
+@app.command("inspect")
+def inspect_command(
+    input: Annotated[str, typer.Argument(help="Source JSON, YAML, NDJSON file, or -")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    max_examples: Annotated[
+        int, typer.Option("--max-examples", help="Maximum example values per path")
+    ] = 3,
+) -> None:
+    """Profile source event paths, types, counts, and sample values."""
+
+    def command() -> None:
+        profiles = inspect_events(load_events(input), max_examples=max_examples)
+        if json_output:
+            print_json([profile.model_dump() for profile in profiles])
+            return
+        from rich.table import Table
+
+        table = Table(title="Source Event Profile")
+        table.add_column("Path")
+        table.add_column("Count", justify="right")
+        table.add_column("Types")
+        table.add_column("Examples")
+        for profile in profiles:
+            table.add_row(
+                profile.path,
+                str(profile.count),
+                ", ".join(f"{name}:{count}" for name, count in profile.types.items()),
+                json.dumps(profile.examples, default=str),
+            )
+        console.print(table)
 
     _run(command)
 
@@ -1322,6 +1384,66 @@ def pack_update(
                 f"Updated pack [bold]{result['name']}[/bold] "
                 f"({result['mapping_count']} mappings)"
             )
+
+    _run(command)
+
+
+@packs_app.command("uninstall")
+def pack_uninstall(
+    name: Annotated[str, typer.Argument(help="Installed pack name")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Remove an installed external mapping pack."""
+
+    def command() -> None:
+        result = uninstall_pack(name)
+        if json_output:
+            print_json(result)
+        else:
+            console.print(f"Removed pack [bold]{result['name']}[/bold]")
+
+    _run(command)
+
+
+@transforms_app.command("list")
+def transforms_list(
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """List available built-in, vendor-pack, and entry-point transforms."""
+
+    def command() -> None:
+        transforms = available_transforms()
+        if json_output:
+            print_json(transforms)
+            return
+        from rich.table import Table
+
+        table = Table(title="Transforms")
+        table.add_column("Name")
+        table.add_column("Source")
+        table.add_column("Description")
+        for transform in transforms:
+            table.add_row(
+                transform["name"],
+                transform["source"],
+                transform["description"],
+            )
+        console.print(table)
+
+    _run(command)
+
+
+@transforms_app.command("show")
+def transforms_show(
+    name: Annotated[str, typer.Argument(help="Transform name")],
+) -> None:
+    """Show one transform definition."""
+
+    def command() -> None:
+        transform = next((item for item in available_transforms() if item["name"] == name), None)
+        if transform is None:
+            raise OCSFKitError(f"Unknown transform: {name}")
+        print_json(transform)
 
     _run(command)
 

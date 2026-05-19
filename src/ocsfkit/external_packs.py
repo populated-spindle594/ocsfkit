@@ -102,6 +102,15 @@ def update_pack(name: str, force: bool = True) -> dict[str, Any]:
     return install_pack(source, name=name, force=force)
 
 
+def uninstall_pack(name: str) -> dict[str, Any]:
+    current = next((pack for pack in installed_packs() if pack["name"] == name), None)
+    if current is None:
+        raise OCSFKitError(f"Installed pack not found: {name}")
+    path = Path(str(current["path"]))
+    shutil.rmtree(path)
+    return {"name": name, "path": str(path), "removed": True}
+
+
 def _materialize_source(source: str, tmp: Path) -> Path:
     path = Path(source).expanduser()
     if path.exists():

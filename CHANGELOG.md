@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.0
+
+- Added `ocsfkit inspect` for source event path, type, count, and example
+  profiling.
+- Added `ocsfkit path` for testing mapping JSONPath expressions against source
+  events.
+- Added `ocsfkit transforms list/show` for transform discovery.
+- Added `ocsfkit pack uninstall` for external mapping pack lifecycle cleanup.
+
 ## 0.11.0
 
 - Added `ocsfkit batch` for corpus conversion with normalized output,

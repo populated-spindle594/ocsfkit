@@ -154,6 +154,26 @@ def test_query_smoke() -> None:
     assert "4" in result.stdout
 
 
+def test_path_smoke() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "path",
+            "fixtures/aws_guardduty_finding.json",
+            "$.resource.instanceDetails.instanceId",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "i-0123456789abcdef0" in result.stdout
+
+
+def test_inspect_smoke() -> None:
+    result = runner.invoke(app, ["inspect", "fixtures/aws_guardduty_finding.json", "--json"])
+    assert result.exit_code == 0
+    assert "$.severity" in result.stdout
+    assert '"types": {' in result.stdout
+
+
 def test_diff_mapping_smoke(tmp_path) -> None:
     before = tmp_path / "before.yaml"
     after = tmp_path / "after.yaml"
@@ -427,6 +447,17 @@ def test_test_transform_smoke() -> None:
     assert "severity_text_to_id" in result.stdout
 
 
+def test_transforms_commands_smoke() -> None:
+    listed = runner.invoke(app, ["transforms", "list", "--json"])
+    assert listed.exit_code == 0
+    assert "parse_timestamp" in listed.stdout
+    assert "aws.severity" in listed.stdout
+
+    shown = runner.invoke(app, ["transforms", "show", "severity_text_to_id"])
+    assert shown.exit_code == 0
+    assert '"name": "severity_text_to_id"' in shown.stdout
+
+
 def test_schema_drift_smoke() -> None:
     result = runner.invoke(app, ["schema-drift", "examples/guardduty-mapping.yaml"])
     assert result.exit_code == 0
@@ -599,6 +630,14 @@ fields:
     )
     assert mapped.exit_code == 0
     assert "Local Pack" in mapped.stdout
+
+    removed = runner.invoke(app, ["pack", "uninstall", "local", "--json"], env=env)
+    assert removed.exit_code == 0
+    assert '"removed": true' in removed.stdout
+
+    listed_after = runner.invoke(app, ["pack", "list", "--json"], env=env)
+    assert listed_after.exit_code == 0
+    assert '"name": "local"' not in listed_after.stdout
 
 
 def test_doctor_and_benchmark_smoke() -> None:

@@ -114,6 +114,32 @@ def apply_transform(name: str, value: Any, transforms: dict[str, Any] | None = N
     return registry[name](value)
 
 
+def available_transforms(custom: dict[str, Any] | None = None) -> list[dict[str, str]]:
+    transforms: list[dict[str, str]] = []
+    transforms.extend(
+        _transform_payload(name, func, "built-in") for name, func in TRANSFORMS.items()
+    )
+    transforms.extend(
+        _transform_payload(name, func, "vendor-pack") for name, func in TRANSFORM_PACKS.items()
+    )
+    transforms.extend(
+        _transform_payload(name, func, "entry-point")
+        for name, func in load_entry_point_transforms().items()
+    )
+    if custom:
+        transforms.extend(_transform_payload(name, func, "custom") for name, func in custom.items())
+    return sorted(transforms, key=lambda item: item["name"])
+
+
+def _transform_payload(name: str, func: Any, source: str) -> dict[str, str]:
+    doc = getattr(func, "__doc__", None)
+    return {
+        "name": name,
+        "source": source,
+        "description": " ".join(str(doc).split()) if doc else "",
+    }
+
+
 def load_entry_point_transforms() -> dict[str, Any]:
     loaded: dict[str, Any] = {}
     for entry_point in entry_points(group="ocsfkit.transforms"):
