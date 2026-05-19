@@ -7,6 +7,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
+COPY examples ./examples
 COPY src ./src
 
 RUN python -m pip install --no-cache-dir .
