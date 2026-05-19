@@ -83,7 +83,7 @@ Use the repo hooks directly:
 ```yaml
 repos:
   - repo: https://github.com/pfrederiksen/ocsfkit
-    rev: v0.7.0
+    rev: v0.7.1
     hooks:
       - id: ocsfkit-validate-mapping
       - id: ocsfkit-pack-validate

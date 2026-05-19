@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1
+
+- Opted GitHub Actions workflows into Node 24 execution to clear hosted-runner
+  deprecation annotations.
+
 ## 0.7.0
 
 - Added SARIF output for privacy scans and schema drift checks.
