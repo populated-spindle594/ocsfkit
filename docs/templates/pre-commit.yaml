@@ -1,0 +1,6 @@
+repos:
+  - repo: https://github.com/pfrederiksen/ocsfkit
+    rev: v0.8.0
+    hooks:
+      - id: ocsfkit-validate-mapping
+      - id: ocsfkit-scan-fixtures

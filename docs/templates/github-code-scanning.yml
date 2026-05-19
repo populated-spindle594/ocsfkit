@@ -1,0 +1,22 @@
+name: ocsfkit-code-scanning
+
+on: [pull_request]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  ocsfkit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ocsfkit
+      - run: ocsfkit scan fixtures --sarif --warn-only > ocsfkit-privacy.sarif
+      - run: ocsfkit schema-drift examples/guardduty-mapping.yaml --sarif > ocsfkit-drift.sarif
+      - uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba
+        with:
+          sarif_file: ocsfkit-privacy.sarif

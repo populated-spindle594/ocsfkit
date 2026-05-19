@@ -170,6 +170,25 @@ fields:
       - title_case
 ```
 
+## Repeated Objects
+
+Use `foreach` when a source array should become repeated OCSF objects:
+
+```yaml
+fields:
+  resources[]:
+    foreach:
+      from: $.resources
+      fields:
+        name:
+          from: $.id
+        type:
+          from: $.type
+```
+
+Each item is mapped independently. Item-level `from` paths are evaluated
+relative to the current source object.
+
 ## Custom Transforms
 
 Mappings can load local Python files that expose a `TRANSFORMS` dictionary:
@@ -199,6 +218,15 @@ Custom transform files execute as Python code. Treat them like source code, not
 data from untrusted parties. `validate-mapping` warns when a mapping references
 custom transforms without `custom_transforms_trusted: true`, and strict mapping
 commands still require `--allow-unsafe-transforms` before loading Python code.
+
+Reusable transform packages should prefer Python entry points:
+
+```toml
+[project.entry-points."ocsfkit.transforms"]
+vendor_status_id = "vendor_ocsf.transforms:status_id"
+```
+
+The entry point name becomes the transform name in mapping YAML.
 
 ## Mapping Tests
 

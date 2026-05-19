@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from datetime import datetime, timezone
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
@@ -107,10 +108,20 @@ TRANSFORMS = {
 
 
 def apply_transform(name: str, value: Any, transforms: dict[str, Any] | None = None) -> Any:
-    registry = TRANSFORMS | TRANSFORM_PACKS | (transforms or {})
+    registry = TRANSFORMS | TRANSFORM_PACKS | load_entry_point_transforms() | (transforms or {})
     if name not in registry:
         raise MappingError(f"Unknown transform: {name}")
     return registry[name](value)
+
+
+def load_entry_point_transforms() -> dict[str, Any]:
+    loaded: dict[str, Any] = {}
+    for entry_point in entry_points(group="ocsfkit.transforms"):
+        func = entry_point.load()
+        if not callable(func):
+            raise MappingError(f"Transform entry point is not callable: {entry_point.name}")
+        loaded[entry_point.name] = func
+    return loaded
 
 
 def load_custom_transforms(paths: list[str], base_dir: Path | None = None) -> dict[str, Any]:

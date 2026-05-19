@@ -1,0 +1,10 @@
+ocsfkit:
+  image: python:3.12-slim
+  script:
+    - python -m pip install ocsfkit
+    - ocsfkit pack validate
+    - ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+    - ocsfkit scorecard fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --min-confidence 0.80 --max-unmapped 25
+  artifacts:
+    reports:
+      junit: ocsfkit-mapping.xml

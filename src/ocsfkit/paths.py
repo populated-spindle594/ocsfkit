@@ -90,6 +90,28 @@ def set_dotted(target: dict[str, Any], path: str, value: Any) -> None:
         cursor = cursor[token.key]
 
 
+def append_dotted(target: dict[str, Any], path: str, value: dict[str, Any]) -> None:
+    tokens = parse_dotted_path(path)
+    if not tokens or not tokens[-1].is_array:
+        raise MappingError(f"foreach target must end in an array segment: {path!r}")
+    cursor: Any = target
+    for index, token in enumerate(tokens):
+        last = index == len(tokens) - 1
+        if not token.is_array:
+            if token.key not in cursor or not isinstance(cursor[token.key], dict):
+                cursor[token.key] = {}
+            cursor = cursor[token.key]
+            continue
+        if token.key not in cursor or not isinstance(cursor[token.key], list):
+            cursor[token.key] = []
+        if last:
+            cursor[token.key].append(value)
+            return
+        if not cursor[token.key] or not isinstance(cursor[token.key][0], dict):
+            cursor[token.key] = [{}]
+        cursor = cursor[token.key][0]
+
+
 def _assign_list_segment(items: list[Any], key: str, value: Any, last: bool) -> None:
     if not items:
         items.append({})

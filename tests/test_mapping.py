@@ -94,3 +94,31 @@ def test_explain_tracks_missing_required_target() -> None:
     }
     explanation = apply_mapping(source, mapping).explanation
     assert "time" in explanation.missing_target_fields
+
+
+def test_foreach_array_mapping() -> None:
+    source = {
+        "assets": [
+            {"id": "i-1", "kind": "EC2"},
+            {"id": "bucket-1", "kind": "S3"},
+        ]
+    }
+    mapping = {
+        "target_class": {"class_uid": 2004, "class_name": "Detection Finding"},
+        "fields": {
+            "resources[]": {
+                "foreach": {
+                    "from": "$.assets",
+                    "fields": {
+                        "name": {"from": "$.id"},
+                        "type": {"from": "$.kind"},
+                    },
+                }
+            }
+        },
+    }
+    result = apply_mapping(source, mapping).event
+    assert result["resources"] == [
+        {"name": "i-1", "type": "EC2"},
+        {"name": "bucket-1", "type": "S3"},
+    ]

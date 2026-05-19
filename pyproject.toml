@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ocsfkit"
-version = "0.7.2"
+version = "0.8.0"
 description = "An OCSF workbench for normalizing, linting, explaining, diffing, and querying security events."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,8 +28,13 @@ dependencies = [
   "typer>=0.12,<1",
 ]
 
+[project.entry-points."ocsfkit.transforms"]
+
 [project.optional-dependencies]
 dev = [
+  "hypothesis>=6,<7",
+  "mkdocs>=1.6,<2",
+  "mkdocs-material>=9.5,<10",
   "pytest>=8,<9",
   "ruff>=0.6,<1",
 ]

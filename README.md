@@ -357,6 +357,7 @@ families such as AWS, identity, network, detections, and infrastructure.
 | `explain <input> --mapping mapping.yaml` | Show mapping decisions, dropped fields, unmapped fields, missing targets, and confidence. |
 | `lint <input>` | Validate OCSF-looking events against the bundled registry. |
 | `diff <before> <after>` | Compare two OCSF events or same-length event streams. |
+| `diff-mapping <before> <after>` | Compare two mapping YAML files semantically. |
 | `query <input> <path>` | Extract common OCSF fields with dotted paths. |
 | `coverage <input> --mapping mapping.yaml` | Summarize mapping quality across a stream and enforce quality budgets. |
 | `scorecard <input> --mapping mapping.yaml` | Grade mapping readiness with coverage, lint, and strict checks. |
@@ -444,6 +445,15 @@ fields:
   actor.user.name:
     from: $.userIdentity.userName
 
+  resources[]:
+    foreach:
+      from: $.resources
+      fields:
+        name:
+          from: $.id
+        type:
+          from: $.type
+
 drop:
   - $.debug
   - $.rawPayload
@@ -459,6 +469,8 @@ Supported source path examples:
 The mapping engine tracks whether every target value came from a source field,
 a transform, a default, or a guess. Unknown source fields that are not mapped or
 explicitly dropped are reported as unmapped.
+Use `foreach` for repeated source objects that should become repeated OCSF
+objects such as `resources[]`.
 
 Built-in transforms include OCSF helpers and vendor-oriented transform packs:
 
@@ -470,6 +482,10 @@ Built-in transforms include OCSF helpers and vendor-oriented transform packs:
 - `okta.status_id`
 - `okta.status`
 - `network.activity_id`
+
+Python packages can also expose reviewed transforms through the
+`ocsfkit.transforms` entry point group. Use entry points for reusable transforms
+and reserve `custom_transforms.py` for local migration work.
 
 See the [Mapping Guide](docs/mapping-guide.md) for advanced examples,
 provenance details, custom transforms, and strict-mode guidance.
@@ -570,6 +586,8 @@ More workflow documentation:
   code-scanning integrations.
 - `ocsfkit doctor` and `ocsfkit benchmark` for release readiness and throughput
   checks.
+- MkDocs configuration for publishing a navigable documentation site from
+  `docs/`.
 
 See the [Install Guide](docs/install.md) for `pipx`, `uvx`, `pip`, Homebrew,
 Docker, GitHub Actions, and pre-commit examples.
@@ -592,7 +610,7 @@ ocsfkit = "ocsfkit.cli:app"
 
 The repository is configured for normal Python and Homebrew releases:
 
-1. Tag a version, for example `git tag v0.7.2 && git push --tags`.
+1. Tag a version, for example `git tag v0.8.0 && git push --tags`.
 2. `.github/workflows/release.yml` builds source and wheel distributions.
 3. PyPI publishing uses Trusted Publishing when configured, with
    `PYPI_API_TOKEN` as a fallback.

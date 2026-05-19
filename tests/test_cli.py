@@ -119,6 +119,34 @@ def test_query_smoke() -> None:
     assert "4" in result.stdout
 
 
+def test_diff_mapping_smoke(tmp_path) -> None:
+    before = tmp_path / "before.yaml"
+    after = tmp_path / "after.yaml"
+    before.write_text(
+        """
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+fields:
+  message:
+    from: $.title
+"""
+    )
+    after.write_text(
+        """
+target_class:
+  class_uid: 2004
+  class_name: Detection Finding
+fields:
+  message:
+    from: $.detail
+"""
+    )
+    result = runner.invoke(app, ["diff-mapping", str(before), str(after), "--json"])
+    assert result.exit_code == 1
+    assert "$.detail" in result.stdout
+
+
 def test_coverage_smoke() -> None:
     result = runner.invoke(
         app,

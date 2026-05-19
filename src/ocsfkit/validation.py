@@ -8,7 +8,7 @@ from ocsfkit.models import LintIssue
 from ocsfkit.paths import extract_json_path, parse_dotted_path
 from ocsfkit.registry import BASE_FIELDS, CLASS_REGISTRY
 from ocsfkit.transform_packs import TRANSFORM_PACKS
-from ocsfkit.transforms import TRANSFORMS
+from ocsfkit.transforms import TRANSFORMS, load_entry_point_transforms
 
 
 def validate_mapping_doc(mapping: dict[str, Any]) -> list[LintIssue]:
@@ -42,6 +42,9 @@ def validate_mapping_doc(mapping: dict[str, Any]) -> list[LintIssue]:
             parse_dotted_path(str(target_path))
         except MappingError as exc:
             issues.append(_error(f"fields.{target_path}", str(exc)))
+        if "foreach" in spec:
+            _validate_foreach(issues, str(target_path), spec["foreach"])
+            continue
         if str(target_path) not in BASE_FIELDS:
             issues.append(_warning(str(target_path), "Target path is not in bundled schema"))
         source_path = spec.get("from")
@@ -56,9 +59,11 @@ def validate_mapping_doc(mapping: dict[str, Any]) -> list[LintIssue]:
             issues.append(_error(f"fields.{target_path}.transform", "must be a string or list"))
         has_custom_transforms = bool(mapping.get("custom_transforms"))
         for transform_name in transforms:
+            entry_point_transforms = load_entry_point_transforms()
             if (
                 transform_name not in TRANSFORMS
                 and transform_name not in TRANSFORM_PACKS
+                and transform_name not in entry_point_transforms
                 and not has_custom_transforms
             ):
                 issues.append(
@@ -79,6 +84,23 @@ def validate_mapping_doc(mapping: dict[str, Any]) -> list[LintIssue]:
     if not isinstance(drop, list) or not all(isinstance(item, str) for item in drop):
         issues.append(_error("drop", "drop must be a list of JSONPath strings"))
     return issues
+
+
+def _validate_foreach(issues: list[LintIssue], target_path: str, foreach: Any) -> None:
+    if not isinstance(foreach, dict):
+        issues.append(_error(f"fields.{target_path}.foreach", "foreach must be a mapping"))
+        return
+    source_path = foreach.get("from")
+    if not isinstance(source_path, str):
+        issues.append(_error(f"fields.{target_path}.foreach.from", "must be a string"))
+    else:
+        try:
+            extract_json_path({}, source_path)
+        except MappingError as exc:
+            issues.append(_error(f"fields.{target_path}.foreach.from", str(exc)))
+    item_fields = foreach.get("fields")
+    if not isinstance(item_fields, dict):
+        issues.append(_error(f"fields.{target_path}.foreach.fields", "must be a mapping"))
 
 
 def _error(path: str, message: str) -> LintIssue:

@@ -25,6 +25,7 @@ from ocsfkit.errors import OCSFKitError, QueryError
 from ocsfkit.io import iter_events, load_events, load_mapping_file
 from ocsfkit.junit import mapping_results_to_junit
 from ocsfkit.mapping import apply_mapping
+from ocsfkit.mapping_diff import diff_mappings
 from ocsfkit.mapping_test import run_mapping_tests
 from ocsfkit.models import DiffChange
 from ocsfkit.packs import list_packs, validate_pack
@@ -260,6 +261,26 @@ def diff(
             print_json(payload)
         else:
             render_diff(changes_by_event)
+
+    _run(command)
+
+
+@app.command("diff-mapping")
+def diff_mapping_command(
+    before: Annotated[str, typer.Argument(help="Before mapping YAML")],
+    after: Annotated[str, typer.Argument(help="After mapping YAML")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Compare two mapping YAML files semantically."""
+
+    def command() -> None:
+        changes = diff_mappings(load_mapping_file(before), load_mapping_file(after))
+        if json_output:
+            print_json([change.model_dump() for change in changes])
+        else:
+            render_diff([changes])
+        if changes:
+            raise typer.Exit(1)
 
     _run(command)
 

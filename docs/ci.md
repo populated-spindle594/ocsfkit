@@ -81,3 +81,12 @@ docker run --rm -v "$PWD:/work" -w /work ghcr.io/pfrederiksen/ocsfkit:latest \
   --min-confidence 0.80 \
   --max-unmapped 25
 ```
+
+## Templates
+
+Copy-paste starter templates live under `docs/templates/`:
+
+- `github-code-scanning.yml`
+- `gitlab-ci.yml`
+- `pre-commit.yaml`
+- `docker-runner.sh`

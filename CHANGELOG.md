@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0
+
+- Added semantic mapping diffs through `ocsfkit diff-mapping`.
+- Added `foreach` array/object mapping for repeated OCSF objects.
+- Added transform plugin support through the `ocsfkit.transforms` entry point
+  group.
+- Added Hypothesis-based property tests for path handling, transforms, and
+  redaction.
+- Strengthened mapping pack validation with fixture and golden-test contracts.
+- Added MkDocs Material publishing in the Pages workflow.
+- Added reusable CI templates for GitHub code scanning, GitLab, pre-commit, and
+  Docker runners.
+
 ## 0.7.2
 
 - Removed Node 20 artifact/release actions from the release workflow.
