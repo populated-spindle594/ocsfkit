@@ -228,6 +228,16 @@ def test_test_mapping_directory_smoke() -> None:
     assert "guardduty-test.yaml" in result.stdout
 
 
+def test_test_mapping_junit_smoke(tmp_path) -> None:
+    output = tmp_path / "junit.xml"
+    result = runner.invoke(
+        app,
+        ["test-mapping", "tests/fixtures", "--junit", str(output)],
+    )
+    assert result.exit_code == 0
+    assert "<testsuite" in output.read_text()
+
+
 def test_test_transform_smoke() -> None:
     result = runner.invoke(app, ["test-transform", "tests/fixtures/transform-test.yaml"])
     assert result.exit_code == 0
@@ -239,10 +249,31 @@ def test_schema_drift_smoke() -> None:
     assert result.exit_code == 0
 
 
+def test_schema_drift_sarif_smoke() -> None:
+    result = runner.invoke(app, ["schema-drift", "examples/guardduty-mapping.yaml", "--sarif"])
+    assert result.exit_code == 0
+    assert '"version": "2.1.0"' in result.stdout
+
+
 def test_scan_smoke() -> None:
     result = runner.invoke(app, ["scan", "fixtures/aws_guardduty_finding.json", "--warn-only"])
     assert result.exit_code == 0
     assert "account_id" in result.stdout
+
+
+def test_scan_sarif_smoke() -> None:
+    result = runner.invoke(
+        app, ["scan", "fixtures/aws_guardduty_finding.json", "--sarif", "--warn-only"]
+    )
+    assert result.exit_code == 0
+    assert "ocsfkit.privacy.account_id" in result.stdout
+
+
+def test_redact_smoke() -> None:
+    result = runner.invoke(app, ["redact", "fixtures/aws_guardduty_finding.json"])
+    assert result.exit_code == 0
+    assert "<redacted>" in result.stdout
+    assert "111122223333" not in result.stdout
 
 
 def test_catalog_smoke() -> None:
@@ -291,6 +322,10 @@ def test_targets_commands_smoke() -> None:
     assert show.exit_code == 0
     assert '"path": "severity_id"' in show.stdout
 
+    complete = runner.invoke(app, ["targets", "complete", "actor.user"])
+    assert complete.exit_code == 0
+    assert "actor.user.name" in complete.stdout
+
 
 def test_pack_commands_smoke() -> None:
     listed = runner.invoke(app, ["pack", "list"])
@@ -300,6 +335,27 @@ def test_pack_commands_smoke() -> None:
     validated = runner.invoke(app, ["pack", "validate", "--json"])
     assert validated.exit_code == 0
     assert "guardduty-mapping.yaml" in validated.stdout
+
+
+def test_doctor_and_benchmark_smoke() -> None:
+    doctor = runner.invoke(app, ["doctor", "--json"])
+    assert doctor.exit_code == 0
+    assert '"passed": true' in doctor.stdout
+
+    benchmark = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "fixtures/aws_guardduty_finding.json",
+            "--mapping",
+            "examples/guardduty-mapping.yaml",
+            "--iterations",
+            "1",
+            "--json",
+        ],
+    )
+    assert benchmark.exit_code == 0
+    assert "events_per_second" in benchmark.stdout
 
 
 def test_golden_catalog_mapping_tests() -> None:

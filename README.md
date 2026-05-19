@@ -15,8 +15,10 @@ guessed, which source fields were dropped, and what is still missing.
   transform, default, or guess.
 - **Catch silent data loss.** Dropped and unmapped source fields are visible in
   explain, coverage, and strict mode.
-- **Ship safer pipelines.** Lint, coverage budgets, SARIF, GitHub annotations,
-  and GitHub summaries fit naturally into CI.
+- **Ship safer pipelines.** Lint, coverage budgets, SARIF, JUnit, GitHub
+  annotations, and GitHub summaries fit naturally into CI.
+- **Share samples safely.** Scan and redact fixtures before they leave your
+  environment.
 - **Compare semantic changes.** Diff OCSF events by field meaning instead of raw
   formatting noise.
 - **Start small, grow later.** The built-in registry covers practical OCSF
@@ -97,6 +99,13 @@ Lint OCSF-looking events:
 ```bash
 ocsfkit lint fixtures/ocsf_detection_finding.json
 ocsfkit lint fixtures/broken_ocsf_event.json --sarif
+```
+
+Scan and redact sample telemetry before sharing it:
+
+```bash
+ocsfkit scan fixtures --warn-only
+ocsfkit redact fixtures/aws_guardduty_finding.json --output redacted.json
 ```
 
 Query common OCSF fields:
@@ -197,6 +206,36 @@ Event 1 lint
 
 `lint` exits non-zero on errors unless `--warn-only` is set.
 
+### Scan and redact output
+
+```bash
+ocsfkit scan fixtures/aws_guardduty_finding.json --warn-only
+```
+
+```text
+account_id event[1].$.accountId: 1111...3333
+ipv4 event[1].$.service.action.awsApiCallAction.remoteIpDetails.ipAddressV4: 198....100.10
+```
+
+```bash
+ocsfkit redact fixtures/aws_guardduty_finding.json
+```
+
+```json
+{
+  "accountId": "<redacted>",
+  "service": {
+    "action": {
+      "awsApiCallAction": {
+        "remoteIpDetails": {
+          "ipAddressV4": "<redacted>"
+        }
+      }
+    }
+  }
+}
+```
+
 ### Coverage output
 
 ```bash
@@ -260,6 +299,8 @@ not a finished answer. Review unmapped fields before production use.
 
 ```bash
 ocsfkit lint fixtures/ocsf_detection_finding.json --sarif
+ocsfkit scan fixtures --sarif --warn-only
+ocsfkit schema-drift examples/guardduty-mapping.yaml --sarif
 
 ocsfkit coverage fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \
@@ -277,6 +318,12 @@ ocsfkit scorecard fixtures/guardduty.ndjson \
 This catches missing OCSF fields, invalid types, falling confidence, and newly
 unmapped vendor fields.
 
+For test-report dashboards, emit JUnit from golden mapping tests:
+
+```bash
+ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+```
+
 ### Compare Mapping Versions
 
 ```bash
@@ -292,6 +339,7 @@ that can affect routing, alerting, and dashboards.
 
 ```bash
 ocsfkit targets search user
+ocsfkit targets complete actor.user
 ocsfkit targets show actor.user.name
 ocsfkit pack list
 ocsfkit pack validate
@@ -314,7 +362,11 @@ families such as AWS, identity, network, detections, and infrastructure.
 | `scorecard <input> --mapping mapping.yaml` | Grade mapping readiness with coverage, lint, and strict checks. |
 | `validate-mapping mapping.yaml` | Check mapping syntax, transforms, and likely schema issues. |
 | `schema-drift mapping.yaml` | Compare a mapping against bundled or synced schema data. |
+| `scan <input>` | Find likely secrets and sensitive identifiers in fixtures or reports. |
+| `redact <input>` | Redact likely secrets while preserving event structure. |
 | `catalog` | Generate Markdown or JSON docs from mapping YAML files. |
+| `doctor` | Check local install health, schema support, and mapping pack validity. |
+| `benchmark <input> --mapping mapping.yaml` | Measure mapping throughput on a representative corpus. |
 | `init-mapping <input>` | Generate a starter mapping worksheet from a representative event. |
 | `test-mapping spec.yaml` | Run fixture-based mapping regression tests. |
 | `test-transform spec.yaml` | Run YAML-defined tests for built-in or custom transforms. |
@@ -333,9 +385,11 @@ ocsfkit explain sample.json --mapping mapping.yaml --json
 ocsfkit explain sample.json --mapping mapping.yaml --markdown
 ocsfkit explain sample.json --mapping mapping.yaml --html --output explanation.html
 ocsfkit lint sample.json --github-annotations
+ocsfkit scan fixtures --sarif --warn-only
 ocsfkit coverage sample.ndjson --mapping mapping.yaml --github-summary
 ocsfkit scorecard sample.ndjson --mapping mapping.yaml --markdown
 ocsfkit catalog --output docs/mapping-catalog.md
+ocsfkit test-mapping tests/goldens --junit mapping-tests.xml
 ```
 
 Strict mode is available on mapping-quality commands:
@@ -351,6 +405,8 @@ ocsfkit schema-drift mapping.yaml
 Strict mode fails on guessed fields, missing targets, and unmapped source fields.
 Python `custom_transforms` are blocked in strict mode unless
 `--allow-unsafe-transforms` is explicitly provided.
+Mappings that use Python transforms should also include
+`custom_transforms_trusted: true` after the transform module has been reviewed.
 
 ## Mapping Files
 
@@ -359,6 +415,8 @@ paths use dotted OCSF paths.
 
 ```yaml
 schema_version: 1.7.0
+ocsf_version: 1.7.0
+requires_ocsfkit: ">=0.7.0,<1.0.0"
 
 target_class:
   class_uid: 2004
@@ -508,6 +566,10 @@ More workflow documentation:
 - `ocsfkit scorecard` for a single pass/fail readiness gate.
 - `ocsfkit catalog` for generated mapping documentation.
 - `ocsfkit schema-drift` for checking mappings against bundled or synced schema data.
+- `ocsfkit scan`, `ocsfkit redact`, and SARIF output for fixture hygiene and
+  code-scanning integrations.
+- `ocsfkit doctor` and `ocsfkit benchmark` for release readiness and throughput
+  checks.
 
 See the [Install Guide](docs/install.md) for `pipx`, `uvx`, `pip`, Homebrew,
 Docker, GitHub Actions, and pre-commit examples.
@@ -530,7 +592,7 @@ ocsfkit = "ocsfkit.cli:app"
 
 The repository is configured for normal Python and Homebrew releases:
 
-1. Tag a version, for example `git tag v0.6.0 && git push --tags`.
+1. Tag a version, for example `git tag v0.7.0 && git push --tags`.
 2. `.github/workflows/release.yml` builds source and wheel distributions.
 3. PyPI publishing uses Trusted Publishing when configured, with
    `PYPI_API_TOKEN` as a fallback.

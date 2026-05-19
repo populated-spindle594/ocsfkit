@@ -107,7 +107,15 @@ ocsfkit explain event.json --mapping mapping.yaml</code></pre>
         </div>
         <div class="card">
           <h2>CI Output</h2>
-          <p>Emit JSON, SARIF, and GitHub Actions annotations for mapping and lint failures.</p>
+          <p>Emit JSON, SARIF, JUnit, GitHub Actions annotations, and job summaries.</p>
+        </div>
+        <div class="card">
+          <h2>Fixture Hygiene</h2>
+          <p>Scan and redact samples before sharing them in tickets, docs, or repos.</p>
+        </div>
+        <div class="card">
+          <h2>Release Checks</h2>
+          <p>Run doctor and benchmark checks before promoting mapping packs.</p>
         </div>
       </section>
       <h2>Examples</h2>
@@ -120,7 +128,15 @@ ocsfkit scorecard fixtures/guardduty.ndjson \
   --min-confidence 0.80 \
   --max-unmapped 25
 
-ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
+ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+
+ocsfkit scan fixtures --sarif --warn-only
+ocsfkit redact fixtures/aws_guardduty_finding.json --output redacted.json
+
+ocsfkit doctor
+ocsfkit benchmark fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --iterations 3
 
 ocsfkit report fixtures/guardduty.ndjson \
   --mapping examples/guardduty-mapping.yaml \

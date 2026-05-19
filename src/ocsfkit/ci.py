@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ocsfkit.models import LintIssue, MappingExplanation
+from ocsfkit.privacy import Finding
 
 
 def lint_issues_to_sarif(issues_by_event: list[list[LintIssue]], source_uri: str) -> dict[str, Any]:
@@ -43,6 +44,40 @@ def lint_issues_to_sarif(issues_by_event: list[list[LintIssue]], source_uri: str
     }
 
 
+def lint_issues_flat_to_sarif(
+    issues: list[LintIssue],
+    source_uri: str,
+    category: str = "ocsfkit",
+) -> dict[str, Any]:
+    return _sarif(
+        [
+            {
+                "ruleId": f"{category}.{issue.path}",
+                "level": "error" if issue.level == "error" else "warning",
+                "message": {"text": issue.message},
+                "locations": [_location(source_uri, 1, issue.path)],
+            }
+            for issue in issues
+        ]
+    )
+
+
+def privacy_findings_to_sarif(findings: list[Finding], source_uri: str) -> dict[str, Any]:
+    return _sarif(
+        [
+            {
+                "ruleId": f"ocsfkit.privacy.{finding.kind}",
+                "level": "warning",
+                "message": {
+                    "text": f"{finding.kind} at {finding.path}: {finding.value}",
+                },
+                "locations": [_location(source_uri, _event_line(finding.path), finding.path)],
+            }
+            for finding in findings
+        ]
+    )
+
+
 def lint_issues_to_github_annotations(
     issues_by_event: list[list[LintIssue]],
     source_uri: str,
@@ -74,3 +109,42 @@ def explanations_to_github_annotations(
 def _escape_annotation(message: str) -> str:
     return message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
+
+def _sarif(results: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "version": "2.1.0",
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "ocsfkit",
+                        "informationUri": "https://github.com/pfrederiksen/ocsfkit",
+                        "rules": [],
+                    }
+                },
+                "results": results,
+            }
+        ],
+    }
+
+
+def _location(source_uri: str, line: int, logical_name: str) -> dict[str, Any]:
+    return {
+        "physicalLocation": {
+            "artifactLocation": {"uri": source_uri},
+            "region": {"startLine": max(line, 1)},
+        },
+        "logicalLocations": [{"fullyQualifiedName": logical_name}],
+    }
+
+
+def _event_line(path: str) -> int:
+    prefix = "event["
+    if not path.startswith(prefix):
+        return 1
+    raw = path[len(prefix) :].split("]", 1)[0]
+    try:
+        return int(raw)
+    except ValueError:
+        return 1

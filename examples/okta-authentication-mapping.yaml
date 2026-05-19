@@ -1,6 +1,9 @@
 schema_version: 1.7.0
+ocsf_version: 1.7.0
+requires_ocsfkit: ">=0.7.0,<1.0.0"
 custom_transforms:
 - custom_transforms.py
+custom_transforms_trusted: true
 target_class:
   class_uid: 3002
   class_name: Authentication

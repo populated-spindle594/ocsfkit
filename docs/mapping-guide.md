@@ -177,6 +177,7 @@ Mappings can load local Python files that expose a `TRANSFORMS` dictionary:
 ```yaml
 custom_transforms:
   - custom_transforms.py
+custom_transforms_trusted: true
 
 fields:
   status_id:
@@ -195,7 +196,9 @@ TRANSFORMS = {"login_status_to_id": login_status_to_id}
 ```
 
 Custom transform files execute as Python code. Treat them like source code, not
-data from untrusted parties.
+data from untrusted parties. `validate-mapping` warns when a mapping references
+custom transforms without `custom_transforms_trusted: true`, and strict mapping
+commands still require `--allow-unsafe-transforms` before loading Python code.
 
 ## Mapping Tests
 
@@ -206,6 +209,12 @@ The spec is a tiny YAML file:
 input: ../../fixtures/aws_guardduty_finding.json
 mapping: ../../examples/guardduty-mapping.yaml
 expected: guardduty-expected.json
+```
+
+CI systems that collect test reports can consume JUnit directly:
+
+```bash
+ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
 ```
 
 Run:

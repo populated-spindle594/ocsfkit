@@ -5,6 +5,10 @@ from typing import Any
 
 import yaml
 
+from ocsfkit.io import load_events
+from ocsfkit.mapping import apply_mapping
+from ocsfkit.privacy import scan_events
+from ocsfkit.registry import CLASS_REGISTRY
 from ocsfkit.validation import validate_mapping_doc
 
 
@@ -28,6 +32,7 @@ def mapping_catalog(root: str = "examples") -> list[dict[str, Any]]:
         metadata = mapping.get("metadata") or {}
         if not isinstance(metadata, dict):
             metadata = {}
+        badges = _badges(path, mapping, metadata)
         items.append(
             {
                 "file": str(path),
@@ -53,6 +58,7 @@ def mapping_catalog(root: str = "examples") -> list[dict[str, Any]]:
                 "issue_count": len(issues),
                 "error_count": sum(1 for issue in issues if issue.level == "error"),
                 "warning_count": sum(1 for issue in issues if issue.level == "warning"),
+                "badges": badges,
             }
         )
     return items
@@ -64,8 +70,8 @@ def catalog_markdown(items: list[dict[str, Any]]) -> str:
         "",
         "Generated from `examples/*.yaml`.",
         "",
-        "| Mapping | Target class | Fields | Transforms | Drops | Validation |",
-        "| --- | --- | ---: | --- | ---: | --- |",
+        "| Mapping | Target class | Quality | Fields | Transforms | Drops | Validation |",
+        "| --- | --- | --- | ---: | --- | ---: | --- |",
     ]
     for item in items:
         transforms = ", ".join(f"`{value}`" for value in item["transforms"]) or "-"
@@ -78,6 +84,7 @@ def catalog_markdown(items: list[dict[str, Any]]) -> str:
             "| "
             f"`{item['file']}` | "
             f"{item.get('class_name') or 'Unknown'} ({item.get('class_uid') or '-'}) | "
+            f"{_badge_text(item)} | "
             f"{item['field_count']} | "
             f"{transforms} | "
             f"{item['drop_count']} | "
@@ -94,6 +101,7 @@ def catalog_markdown(items: list[dict[str, Any]]) -> str:
                 f"- Maturity: `{item.get('maturity') or 'draft'}`",
                 f"- Owner: `{item.get('owner') or 'unassigned'}`",
                 f"- Last reviewed: `{item.get('last_reviewed') or 'unknown'}`",
+                f"- Quality: {_badge_text(item)}",
                 f"- Target class: {item.get('class_name') or 'Unknown'} "
                 f"(`{item.get('class_uid') or '-'}`)",
                 f"- Schema version: `{item.get('schema_version') or 'unspecified'}`",
@@ -123,3 +131,59 @@ def _product_name(target_class: dict[str, Any]) -> str | None:
             return str(product["name"])
     value = target_class.get("metadata.product.name")
     return str(value) if value else None
+
+
+def _badges(path: Path, mapping: dict[str, Any], metadata: dict[str, Any]) -> dict[str, str]:
+    class_uid = (mapping.get("target_class") or {}).get("class_uid")
+    fields = set((mapping.get("fields") or {}).keys()) | set(
+        (mapping.get("target_class") or {}).keys()
+    )
+    class_spec = CLASS_REGISTRY.get(class_uid)
+    required = (
+        _percent(len(fields & class_spec.required), len(class_spec.required))
+        if class_spec
+        else "n/a"
+    )
+    recommended = (
+        _percent(len(fields & class_spec.recommended), len(class_spec.recommended))
+        if class_spec
+        else "n/a"
+    )
+    secret_count = "n/a"
+    confidence = "n/a"
+    fixture = metadata.get("fixture")
+    if isinstance(fixture, str):
+        fixture_path = (path.parent.parent / fixture).resolve()
+        if fixture_path.exists():
+            events = load_events(str(fixture_path))
+            secret_count = str(len(scan_events(events)))
+            if events:
+                try:
+                    scores = [
+                        apply_mapping(event, mapping).explanation.confidence for event in events
+                    ]
+                    confidence = f"{sum(scores) / len(scores):.3f}"
+                except Exception:
+                    confidence = "n/a"
+    return {
+        "required": required,
+        "recommended": recommended,
+        "confidence": confidence,
+        "secrets": secret_count,
+    }
+
+
+def _percent(value: int, total: int) -> str:
+    if total == 0:
+        return "100%"
+    return f"{round((value / total) * 100)}%"
+
+
+def _badge_text(item: dict[str, Any]) -> str:
+    badges = item.get("badges") or {}
+    return (
+        f"required {badges.get('required', 'n/a')}, "
+        f"recommended {badges.get('recommended', 'n/a')}, "
+        f"confidence {badges.get('confidence', 'n/a')}, "
+        f"secrets {badges.get('secrets', 'n/a')}"
+    )

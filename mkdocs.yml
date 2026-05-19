@@ -1,0 +1,13 @@
+site_name: ocsfkit
+site_description: OCSF workbench for mapping, linting, explaining, and testing security telemetry.
+repo_url: https://github.com/pfrederiksen/ocsfkit
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Install: install.md
+  - Mapping Guide: mapping-guide.md
+  - Mapping Catalog: mapping-catalog.md
+  - CI Examples: ci.md
+  - Real-World Workflows: real-world-workflows.md

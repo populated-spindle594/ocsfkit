@@ -71,6 +71,7 @@ fields:
 ```yaml
 custom_transforms:
   - custom_transforms.py
+custom_transforms_trusted: true
 
 fields:
   status:

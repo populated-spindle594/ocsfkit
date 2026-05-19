@@ -2,30 +2,30 @@
 
 Generated from `examples/*.yaml`.
 
-| Mapping | Target class | Fields | Transforms | Drops | Validation |
-| --- | --- | ---: | --- | ---: | --- |
-| `examples/aws-vpc-flow-mapping.yaml` | Network Activity (4001) | 12 | `epoch_seconds_to_ms` | 6 | ok |
-| `examples/azure-activity-mapping.yaml` | Authentication (3002) | 11 | `parse_timestamp` | 1 | ok |
-| `examples/azure-ad-signin-mapping.yaml` | Authentication (3002) | 11 | `azure_status_id`, `azure_status_text`, `parse_timestamp` | 0 | ok |
-| `examples/cloudflare-log-mapping.yaml` | Network Activity (4001) | 7 | `parse_timestamp` | 3 | ok |
-| `examples/cloudtrail-console-login-mapping.yaml` | Authentication (3002) | 11 | `login_status_to_id`, `normalize_login_status`, `parse_timestamp` | 1 | ok |
-| `examples/crowdstrike-detection-mapping.yaml` | Detection Finding (2004) | 9 | `lower`, `parse_timestamp`, `severity_text_to_id`, `title_case` | 1 | ok |
-| `examples/defender-alert-mapping.yaml` | Detection Finding (2004) | 7 | `parse_timestamp`, `severity_text_to_id` | 1 | ok |
-| `examples/gcp-scc-finding-mapping.yaml` | Detection Finding (2004) | 8 | `parse_timestamp`, `severity_text_to_id`, `title_case` | 0 | ok |
-| `examples/github-audit-mapping.yaml` | Process Activity (1007) | 9 | `parse_timestamp`, `to_string` | 1 | ok |
-| `examples/google-cloud-audit-mapping.yaml` | Authentication (3002) | 11 | `parse_timestamp` | 2 | ok |
-| `examples/guardduty-mapping.yaml` | Detection Finding (2004) | 10 | `parse_timestamp`, `severity_text_to_id` | 2 | ok |
-| `examples/kubernetes-audit-mapping.yaml` | Process Activity (1007) | 10 | `parse_timestamp` | 1 | ok |
-| `examples/lacework-alert-mapping.yaml` | Network Activity (4001) | 9 | `parse_timestamp` | 1 | ok |
-| `examples/okta-authentication-mapping.yaml` | Authentication (3002) | 10 | `login_status_to_id`, `normalize_login_status`, `parse_timestamp` | 1 | ok |
-| `examples/paloalto-traffic-mapping.yaml` | Network Activity (4001) | 10 | `parse_timestamp` | 2 | ok |
-| `examples/securityhub-mapping.yaml` | Detection Finding (2004) | 9 | `parse_timestamp`, `severity_text_to_id` | 0 | ok |
-| `examples/sentinel-alert-mapping.yaml` | Detection Finding (2004) | 7 | `parse_timestamp`, `severity_text_to_id` | 0 | ok |
-| `examples/splunk-notable-mapping.yaml` | Detection Finding (2004) | 7 | `parse_timestamp`, `severity_text_to_id`, `title_case` | 1 | ok |
-| `examples/sysmon-process-mapping.yaml` | Process Activity (1007) | 8 | `parse_timestamp` | 2 | ok |
-| `examples/windows-security-auth-mapping.yaml` | Authentication (3002) | 10 | `parse_timestamp` | 2 | ok |
-| `examples/wiz-finding-mapping.yaml` | Detection Finding (2004) | 9 | `parse_timestamp`, `severity_text_to_id`, `title_case` | 0 | ok |
-| `examples/zeek-conn-mapping.yaml` | Network Activity (4001) | 9 | `epoch_seconds_to_ms` | 2 | ok |
+| Mapping | Target class | Quality | Fields | Transforms | Drops | Validation |
+| --- | --- | --- | ---: | --- | ---: | --- |
+| `examples/aws-vpc-flow-mapping.yaml` | Network Activity (4001) | required 75%, recommended 100%, confidence 0.850, secrets 3 | 12 | `epoch_seconds_to_ms` | 6 | ok |
+| `examples/azure-activity-mapping.yaml` | Authentication (3002) | required 75%, recommended 100%, confidence 0.841, secrets 3 | 11 | `parse_timestamp` | 1 | ok |
+| `examples/azure-ad-signin-mapping.yaml` | Authentication (3002) | required 75%, recommended 100%, confidence n/a, secrets 4 | 11 | `azure_status_id`, `azure_status_text`, `parse_timestamp` | 0 | ok |
+| `examples/cloudflare-log-mapping.yaml` | Network Activity (4001) | required 75%, recommended 75%, confidence 0.775, secrets 1 | 7 | `parse_timestamp` | 3 | ok |
+| `examples/cloudtrail-console-login-mapping.yaml` | Authentication (3002) | required 75%, recommended 100%, confidence n/a, secrets 4 | 11 | `login_status_to_id`, `normalize_login_status`, `parse_timestamp` | 1 | ok |
+| `examples/crowdstrike-detection-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.808, secrets 0 | 9 | `lower`, `parse_timestamp`, `severity_text_to_id`, `title_case` | 1 | ok |
+| `examples/defender-alert-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.850, secrets 1 | 7 | `parse_timestamp`, `severity_text_to_id` | 1 | ok |
+| `examples/gcp-scc-finding-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.862, secrets 0 | 8 | `parse_timestamp`, `severity_text_to_id`, `title_case` | 0 | ok |
+| `examples/github-audit-mapping.yaml` | Process Activity (1007) | required 75%, recommended 67%, confidence 0.715, secrets 1 | 9 | `parse_timestamp`, `to_string` | 1 | ok |
+| `examples/google-cloud-audit-mapping.yaml` | Authentication (3002) | required 75%, recommended 100%, confidence 0.618, secrets 2 | 11 | `parse_timestamp` | 2 | ok |
+| `examples/guardduty-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.462, secrets 2 | 10 | `parse_timestamp`, `severity_text_to_id` | 2 | ok |
+| `examples/kubernetes-audit-mapping.yaml` | Process Activity (1007) | required 75%, recommended 33%, confidence 0.687, secrets 1 | 10 | `parse_timestamp` | 1 | ok |
+| `examples/lacework-alert-mapping.yaml` | Network Activity (4001) | required 75%, recommended 100%, confidence 0.829, secrets 3 | 9 | `parse_timestamp` | 1 | ok |
+| `examples/okta-authentication-mapping.yaml` | Authentication (3002) | required 75%, recommended 100%, confidence n/a, secrets 2 | 10 | `login_status_to_id`, `normalize_login_status`, `parse_timestamp` | 1 | ok |
+| `examples/paloalto-traffic-mapping.yaml` | Network Activity (4001) | required 75%, recommended 100%, confidence 0.840, secrets 2 | 10 | `parse_timestamp` | 2 | ok |
+| `examples/securityhub-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.637, secrets 2 | 9 | `parse_timestamp`, `severity_text_to_id` | 0 | ok |
+| `examples/sentinel-alert-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.875, secrets 2 | 7 | `parse_timestamp`, `severity_text_to_id` | 0 | ok |
+| `examples/splunk-notable-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.850, secrets 1 | 7 | `parse_timestamp`, `severity_text_to_id`, `title_case` | 1 | ok |
+| `examples/sysmon-process-mapping.yaml` | Process Activity (1007) | required 75%, recommended 100%, confidence 0.829, secrets 0 | 8 | `parse_timestamp` | 2 | ok |
+| `examples/windows-security-auth-mapping.yaml` | Authentication (3002) | required 75%, recommended 100%, confidence 0.713, secrets 1 | 10 | `parse_timestamp` | 2 | ok |
+| `examples/wiz-finding-mapping.yaml` | Detection Finding (2004) | required 80%, recommended 100%, confidence 0.871, secrets 0 | 9 | `parse_timestamp`, `severity_text_to_id`, `title_case` | 0 | ok |
+| `examples/zeek-conn-mapping.yaml` | Network Activity (4001) | required 75%, recommended 100%, confidence 0.715, secrets 2 | 9 | `epoch_seconds_to_ms` | 2 | ok |
 
 ## aws-vpc-flow-mapping
 
@@ -34,6 +34,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.850, secrets 3
 - Target class: Network Activity (`4001`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -57,6 +58,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.841, secrets 3
 - Target class: Authentication (`3002`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -79,6 +81,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence n/a, secrets 4
 - Target class: Authentication (`3002`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -101,6 +104,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 75%, confidence 0.775, secrets 1
 - Target class: Network Activity (`4001`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -119,6 +123,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence n/a, secrets 4
 - Target class: Authentication (`3002`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -141,6 +146,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.808, secrets 0
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -161,6 +167,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.850, secrets 1
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -179,6 +186,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.862, secrets 0
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -198,6 +206,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 67%, confidence 0.715, secrets 1
 - Target class: Process Activity (`1007`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -218,6 +227,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.618, secrets 2
 - Target class: Authentication (`3002`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -240,6 +250,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.462, secrets 2
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -261,6 +272,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 33%, confidence 0.687, secrets 1
 - Target class: Process Activity (`1007`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -282,6 +294,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.829, secrets 3
 - Target class: Network Activity (`4001`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -302,6 +315,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence n/a, secrets 2
 - Target class: Authentication (`3002`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -323,6 +337,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.840, secrets 2
 - Target class: Network Activity (`4001`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -344,6 +359,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.637, secrets 2
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -364,6 +380,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.875, secrets 2
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -382,6 +399,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.850, secrets 1
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -400,6 +418,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.829, secrets 0
 - Target class: Process Activity (`1007`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -419,6 +438,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.713, secrets 1
 - Target class: Authentication (`3002`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -440,6 +460,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 80%, recommended 100%, confidence 0.871, secrets 0
 - Target class: Detection Finding (`2004`)
 - Schema version: `1.7.0`
 - Mapped targets:
@@ -460,6 +481,7 @@ Generated from `examples/*.yaml`.
 - Maturity: `example`
 - Owner: `ocsfkit maintainers`
 - Last reviewed: `2026-05-18`
+- Quality: required 75%, recommended 100%, confidence 0.715, secrets 2
 - Target class: Network Activity (`4001`)
 - Schema version: `1.7.0`
 - Mapped targets:

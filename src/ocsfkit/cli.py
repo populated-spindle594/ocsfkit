@@ -8,23 +8,29 @@ import typer
 import yaml
 
 from ocsfkit.baseline import check_baseline, create_baseline
+from ocsfkit.benchmark import benchmark_mapping
 from ocsfkit.catalog import catalog_markdown, mapping_catalog
 from ocsfkit.ci import (
     explanations_to_github_annotations,
+    lint_issues_flat_to_sarif,
     lint_issues_to_github_annotations,
     lint_issues_to_sarif,
+    privacy_findings_to_sarif,
 )
 from ocsfkit.coverage import enforce_coverage_thresholds, mapping_coverage
 from ocsfkit.diff import diff_events
+from ocsfkit.doctor import run_doctor
 from ocsfkit.drift import mapping_schema_drift
 from ocsfkit.errors import OCSFKitError, QueryError
 from ocsfkit.io import iter_events, load_events, load_mapping_file
+from ocsfkit.junit import mapping_results_to_junit
 from ocsfkit.mapping import apply_mapping
 from ocsfkit.mapping_test import run_mapping_tests
 from ocsfkit.models import DiffChange
 from ocsfkit.packs import list_packs, validate_pack
 from ocsfkit.paths import flatten_paths, query_field
 from ocsfkit.privacy import scan_events
+from ocsfkit.redact import redact_value
 from ocsfkit.registry import DEFAULT_SCHEMA_VERSION, lint_event
 from ocsfkit.render import (
     console,
@@ -539,6 +545,7 @@ def schema_drift_command(
         str | None, typer.Option("--schema", help="Optional compact schema JSON/YAML path")
     ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    sarif: Annotated[bool, typer.Option("--sarif", help="Emit SARIF JSON for CI")] = False,
     warn_only: Annotated[
         bool, typer.Option("--warn-only", help="Exit zero even when drift is found")
     ] = False,
@@ -548,7 +555,9 @@ def schema_drift_command(
     def command() -> None:
         schema_doc = yaml.safe_load(Path(schema).read_text()) if schema else None
         issues = mapping_schema_drift(load_mapping_file(mapping), schema_doc)
-        if json_output:
+        if sarif:
+            print_json(lint_issues_flat_to_sarif(issues, mapping, "ocsfkit.schema_drift"))
+        elif json_output:
             print_json([issue.model_dump() for issue in issues])
         else:
             render_lint([issues])
@@ -562,6 +571,7 @@ def schema_drift_command(
 def scan_command(
     input: Annotated[str, typer.Argument(help="JSON, YAML, or NDJSON file to scan")],
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    sarif: Annotated[bool, typer.Option("--sarif", help="Emit SARIF JSON for CI")] = False,
     warn_only: Annotated[
         bool, typer.Option("--warn-only", help="Exit zero even when findings exist")
     ] = False,
@@ -570,7 +580,9 @@ def scan_command(
 
     def command() -> None:
         findings = scan_events(_load_scan_events(input))
-        if json_output:
+        if sarif:
+            print_json(privacy_findings_to_sarif(findings, input))
+        elif json_output:
             print_json([finding.model_dump() for finding in findings])
         else:
             if not findings:
@@ -579,6 +591,39 @@ def scan_command(
                 console.print(f"[yellow]{finding.kind}[/] {finding.path}: {finding.value}")
         if findings and not warn_only:
             raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("redact")
+def redact_command(
+    input: Annotated[str, typer.Argument(help="JSON, YAML, NDJSON file, or - for stdin")],
+    output: Annotated[
+        str | None, typer.Option("--output", "-o", help="Write redacted output to a file")
+    ] = None,
+    replacement: Annotated[
+        str, typer.Option("--replacement", help="Replacement text for sensitive values")
+    ] = "<redacted>",
+    format: OutputFormat = "json",  # noqa: A002
+) -> None:
+    """Redact likely secrets and identifiers while preserving event structure."""
+
+    def command() -> None:
+        _validate_format(format)
+        redacted = [redact_value(event, replacement) for event in load_events(input)]
+        if output:
+            if format == "ndjson":
+                import json
+
+                Path(output).write_text("\n".join(json.dumps(event) for event in redacted) + "\n")
+            else:
+                import json
+
+                payload = redacted[0] if len(redacted) == 1 else redacted
+                Path(output).write_text(json.dumps(payload, indent=2) + "\n")
+            console.print(f"Wrote {output}")
+        else:
+            print_events(redacted, format)
 
     _run(command)
 
@@ -609,11 +654,17 @@ def catalog_command(
 def test_mapping_command(
     spec: Annotated[str, typer.Argument(help="Mapping test YAML path or directory")],
     json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    junit: Annotated[
+        str | None, typer.Option("--junit", help="Write JUnit XML results to a file")
+    ] = None,
 ) -> None:
     """Run one or more mapping fixture tests against expected OCSF output."""
 
     def command() -> None:
         results = run_mapping_tests(spec)
+        if junit:
+            Path(junit).write_text(mapping_results_to_junit(results))
+            console.print(f"Wrote {junit}")
         if json_output:
             print_json(results)
         else:
@@ -626,6 +677,57 @@ def test_mapping_command(
                     render_diff([changes])
         if any(not result["passed"] for result in results):
             raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("doctor")
+def doctor_command(
+    root: Annotated[str, typer.Option("--root", help="Repository root to inspect")] = ".",
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    """Check local install, schema, mapping packs, and common release tooling."""
+
+    def command() -> None:
+        report = run_doctor(root)
+        if json_output:
+            print_json(report)
+            return
+        for check in report["checks"]:
+            color = "green" if check["passed"] else "red"
+            console.print(f"[{color}]{check['name']}[/]: {check['detail']}")
+        if not report["passed"]:
+            raise typer.Exit(1)
+
+    _run(command)
+
+
+@app.command("benchmark")
+def benchmark_command(
+    input: Annotated[str, typer.Argument(help="Source event JSON, YAML, NDJSON file, or -")],
+    mapping: Annotated[str, typer.Option("--mapping", "-m", help="Mapping YAML path")],
+    iterations: Annotated[int, typer.Option("--iterations", help="Benchmark iterations")] = 5,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+    allow_unsafe_transforms: Annotated[
+        bool, typer.Option("--allow-unsafe-transforms", help="Allow Python custom_transforms files")
+    ] = False,
+) -> None:
+    """Benchmark mapping throughput for a sample corpus."""
+
+    def command() -> None:
+        mapping_doc = load_mapping_file(mapping)
+        custom_transforms = _custom_transforms_for_mapping(
+            mapping_doc, mapping, allow_unsafe_transforms
+        )
+        report = benchmark_mapping(load_events(input), mapping_doc, custom_transforms, iterations)
+        if json_output:
+            print_json(report)
+            return
+        console.print(f"[bold]Events:[/bold] {report['events']}")
+        console.print(f"[bold]Iterations:[/bold] {report['iterations']}")
+        console.print(f"[bold]Best seconds:[/bold] {report['best_seconds']}")
+        console.print(f"[bold]Median seconds:[/bold] {report['median_seconds']}")
+        console.print(f"[bold]Events/sec:[/bold] {report['events_per_second']}")
 
     _run(command)
 
@@ -724,6 +826,24 @@ def targets_search(
     def command() -> None:
         targets = search_targets(term)
         print_json(targets) if json_output else _print_targets(targets)
+
+    _run(command)
+
+
+@targets_app.command("complete")
+def targets_complete(
+    prefix: Annotated[str, typer.Argument(help="Target path prefix")],
+) -> None:
+    """Print target paths matching a prefix for shell/editor completion."""
+
+    def command() -> None:
+        matches = [
+            target["path"]
+            for target in list_targets()
+            if str(target["path"]).startswith(prefix)
+        ]
+        for match in matches:
+            console.print(match)
 
     _run(command)
 

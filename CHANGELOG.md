@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.0
+
+- Added SARIF output for privacy scans and schema drift checks.
+- Added JUnit XML output for mapping golden tests.
+- Added `redact`, `doctor`, and `benchmark` commands.
+- Added target path prefix completion through `ocsfkit targets complete`.
+- Added mapping pack compatibility metadata with `ocsf_version` and
+  `requires_ocsfkit`.
+- Added explicit custom transform trust validation.
+- Added mapping catalog quality badges for required/recommended coverage,
+  confidence, and fixture scan findings.
+- Added MkDocs configuration and expanded production documentation.
+
 ## 0.6.0
 
 - Added mapping readiness scorecards.

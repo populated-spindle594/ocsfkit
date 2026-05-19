@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ocsfkit.compat import compatibility_issues
 from ocsfkit.errors import MappingError
 from ocsfkit.models import LintIssue
 from ocsfkit.paths import extract_json_path, parse_dotted_path
@@ -11,7 +12,7 @@ from ocsfkit.transforms import TRANSFORMS
 
 
 def validate_mapping_doc(mapping: dict[str, Any]) -> list[LintIssue]:
-    issues: list[LintIssue] = []
+    issues: list[LintIssue] = compatibility_issues(mapping)
     target_class = mapping.get("target_class")
     if not isinstance(target_class, dict):
         issues.append(_error("target_class", "target_class must be a mapping"))
@@ -66,6 +67,14 @@ def validate_mapping_doc(mapping: dict[str, Any]) -> list[LintIssue]:
                         f"Unknown built-in transform {transform_name!r}; may be custom",
                     )
                 )
+    if mapping.get("custom_transforms") and mapping.get("custom_transforms_trusted") is not True:
+        issues.append(
+            _warning(
+                "custom_transforms",
+                "custom transforms execute Python code; set custom_transforms_trusted: true "
+                "after review",
+            )
+        )
     drop = mapping.get("drop", [])
     if not isinstance(drop, list) or not all(isinstance(item, str) for item in drop):
         issues.append(_error("drop", "drop must be a list of JSONPath strings"))

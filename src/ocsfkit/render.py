@@ -12,13 +12,13 @@ console = Console()
 
 
 def print_json(value: Any) -> None:
-    console.print(json.dumps(value, indent=2, sort_keys=True, default=str))
+    console.file.write(json.dumps(value, indent=2, sort_keys=True, default=str) + "\n")
 
 
 def print_events(events: list[dict[str, Any]], output_format: str) -> None:
     if output_format == "ndjson":
         for event in events:
-            console.print(json.dumps(event, sort_keys=True, default=str))
+            console.file.write(json.dumps(event, sort_keys=True, default=str) + "\n")
     else:
         print_json(events[0] if len(events) == 1 else events)
 
@@ -105,4 +105,3 @@ def _diff_style(path: str, kind: str) -> str:
     if kind == "removed":
         return "red"
     return "yellow"
-

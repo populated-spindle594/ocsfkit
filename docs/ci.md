@@ -23,6 +23,12 @@ jobs:
             --min-confidence 0.80 \
             --max-unmapped 25 \
             --github-summary
+      - name: Write mapping test report
+        run: ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+      - name: Scan fixtures for sensitive data
+        run: ocsfkit scan fixtures --sarif --warn-only > ocsfkit-privacy.sarif
+      - name: Check schema drift
+        run: ocsfkit schema-drift examples/guardduty-mapping.yaml --sarif > ocsfkit-drift.sarif
 ```
 
 ## GitLab CI
@@ -33,8 +39,12 @@ ocsfkit:
   script:
     - python -m pip install ocsfkit
     - ocsfkit pack validate
-    - ocsfkit test-mapping tests/goldens
+    - ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
+    - ocsfkit scan fixtures --warn-only
     - ocsfkit scorecard fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --min-confidence 0.80 --max-unmapped 25
+  artifacts:
+    reports:
+      junit: ocsfkit-mapping.xml
 ```
 
 ## Buildkite
@@ -45,7 +55,9 @@ steps:
     command:
       - "python -m pip install ocsfkit"
       - "ocsfkit pack validate"
-      - "ocsfkit test-mapping tests/goldens"
+      - "ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml"
+      - "ocsfkit scan fixtures --warn-only"
+      - "ocsfkit doctor"
 ```
 
 ## Makefile
@@ -54,8 +66,10 @@ steps:
 .PHONY: ocsfkit
 ocsfkit:
 	ocsfkit pack validate
-	ocsfkit test-mapping tests/goldens
+	ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
 	ocsfkit scan fixtures --warn-only
+	ocsfkit doctor
+	ocsfkit benchmark fixtures/guardduty.ndjson --mapping examples/guardduty-mapping.yaml --iterations 3
 ```
 
 ## Docker

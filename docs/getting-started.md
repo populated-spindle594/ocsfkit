@@ -194,6 +194,7 @@ Run it with:
 ```bash
 ocsfkit test-mapping tests/fixtures/guardduty-test.yaml
 ocsfkit test-mapping tests/fixtures
+ocsfkit test-mapping tests/fixtures --junit ocsfkit-mapping.xml
 ```
 
 If the mapping output changes, `test-mapping` prints a semantic diff and exits
@@ -210,8 +211,35 @@ ocsfkit map fixtures/aws_guardduty_finding.json \
 Strict mode fails on guessed fields, missing target fields, and unmapped source
 fields. It also blocks Python `custom_transforms` files unless
 `--allow-unsafe-transforms` is set.
+Mappings that use reviewed Python transforms should set
+`custom_transforms_trusted: true` so validation makes the trust decision
+explicit.
 
-## 9. Use Workshop Mode for New Sources
+## 9. Scan, Redact, and Benchmark Fixtures
+
+Before a fixture goes into a ticket, docs page, or public repository, scan it:
+
+```bash
+ocsfkit scan fixtures --warn-only
+ocsfkit scan fixtures --sarif --warn-only > ocsfkit-privacy.sarif
+```
+
+Create a shareable redacted sample while preserving the original event shape:
+
+```bash
+ocsfkit redact fixtures/aws_guardduty_finding.json --output /tmp/guardduty-redacted.json
+```
+
+Check local release readiness and mapping throughput:
+
+```bash
+ocsfkit doctor
+ocsfkit benchmark fixtures/guardduty.ndjson \
+  --mapping examples/guardduty-mapping.yaml \
+  --iterations 3
+```
+
+## 10. Use Workshop Mode for New Sources
 
 When onboarding a new product, start by listing every source path:
 
